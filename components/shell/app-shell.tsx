@@ -37,6 +37,12 @@ export function AppShell({ children, initialItems, statusLine }: AppShellProps) 
     if (activeId) void refresh();
   }, [activeId, refresh]);
 
+  useEffect(() => {
+    const onChanged = () => void refresh();
+    window.addEventListener("hc:history-changed", onChanged);
+    return () => window.removeEventListener("hc:history-changed", onChanged);
+  }, [refresh]);
+
   const onNavigate = (id: string) => router.push(`/s/${id}`);
   const onNew = () => router.push("/");
   const step = (delta: number) => {
