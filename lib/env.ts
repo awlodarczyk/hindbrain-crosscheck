@@ -50,7 +50,8 @@ export class EnvError extends Error {
  * @throws EnvError listing every invalid key.
  */
 export function parseEnv(raw: Readonly<Record<string, string | undefined>>): Env {
-  const result = EnvSchema.safeParse(raw);
+  const normalized = Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== ""));
+  const result = EnvSchema.safeParse(normalized);
   if (result.success) return result.data;
   throw new EnvError(result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`));
 }

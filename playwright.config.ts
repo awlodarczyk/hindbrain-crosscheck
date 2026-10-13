@@ -6,7 +6,7 @@ export default defineConfig({
   testDir: "tests/e2e",
   use: { baseURL },
   webServer: {
-    command: "pnpm dev",
+    command: "node_modules/.bin/next dev -H 127.0.0.1 -p 4173",
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120000,

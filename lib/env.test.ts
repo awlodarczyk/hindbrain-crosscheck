@@ -36,4 +36,21 @@ describe("parseEnv", () => {
       /APP_SECRET[\s\S]*PORT|PORT[\s\S]*APP_SECRET/,
     );
   });
+  it("treats empty optional values as unset", () => {
+    const e = parseEnv({ ...base, APP_URL: "", SMTP_URL: "" });
+    expect(e.APP_URL).toBeUndefined();
+    expect(e.SMTP_URL).toBeUndefined();
+  });
+  it("treats empty hosted requirements as missing", () => {
+    expect(() =>
+      parseEnv({
+        ...base,
+        APP_MODE: "hosted",
+        VALKEY_URL: "",
+        ADMIN_EMAIL: "",
+        ADMIN_PASSWORD: "",
+        APP_URL: "",
+      }),
+    ).toThrow(/VALKEY_URL.*ADMIN_EMAIL.*ADMIN_PASSWORD.*APP_URL/s);
+  });
 });
