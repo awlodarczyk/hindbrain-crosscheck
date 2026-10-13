@@ -1,3 +1,3 @@
 export default function Home() {
-  return <main>hindbrain crosscheck</main>;
+  return <div className="p-6 text-text-secondary">hindbrain crosscheck</div>;
 }
