@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
+    "test:live": "RUN_LIVE=1 vitest run tests/live",
     "e2e": "playwright test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

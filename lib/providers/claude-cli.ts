@@ -11,10 +11,9 @@ import { z } from "zod";
 import { detectCli } from "./cli-detect";
 import { runCli } from "./cli-runner";
 import { ProviderError } from "./errors";
-import { uniqueCitations } from "./types";
+import { extractUrls } from "./cli-citations";
 import type {
   CallOptions,
-  Citation,
   ModelRequest,
   ModelResult,
   Provider,
@@ -25,7 +24,6 @@ import type {
 const TEST_MODEL = "claude-haiku-5-5";
 const TEST_TIMEOUT_MS = 60_000;
 const MAX_TURNS = "6";
-const URL_RE = /https?:\/\/[^\s<>"'`]+/g;
 
 const outputSchema = z.object({
   is_error: z.boolean().optional(),
@@ -72,18 +70,6 @@ export function parseClaudeCliOutput(stdout: string) {
     costUsd: d.total_cost_usd ?? null,
     raw,
   };
-}
-
-export function extractUrls(text: string): readonly Citation[] {
-  const found = (text.match(URL_RE) ?? []).flatMap((m) => {
-    const url = m.replace(/[.,;:!?)\]}]+$/, "");
-    try {
-      return [{ title: new URL(url).hostname, url }];
-    } catch {
-      return [];
-    }
-  });
-  return uniqueCitations(found);
 }
 
 const withDomains = (req: ModelRequest) =>

@@ -1,13 +1,9 @@
 import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeSpawn } from "@/tests/helpers/fake-spawn";
+import { extractUrls } from "./cli-citations";
 import { clearCliCache } from "./cli-detect";
-import {
-  CLAUDE_ARGS,
-  createClaudeCliProvider,
-  extractUrls,
-  parseClaudeCliOutput,
-} from "./claude-cli";
+import { CLAUDE_ARGS, createClaudeCliProvider, parseClaudeCliOutput } from "./claude-cli";
 import type { ModelRequest } from "./types";
 
 const fixture = readFileSync("tests/fixtures/cli/claude-json-ok.txt", "utf8");

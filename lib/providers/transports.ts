@@ -1,28 +1,17 @@
 import type { Transport } from "@/lib/db/enums";
-import type { ProviderId } from "@/lib/db/enums";
-import { ProviderError } from "./errors";
+import { createAnthropicProvider } from "./anthropic-api";
+import { createClaudeCliProvider } from "./claude-cli";
+import { createCodexCliProvider } from "./codex-cli";
 import { createMockProvider } from "./mock";
+import { createOpenAIProvider } from "./openai-api";
 import type { Provider, ProviderConfig, ProviderDeps } from "./types";
 
 export type ProviderFactory = (cfg: ProviderConfig, deps: ProviderDeps) => Provider;
 
-/** Placeholder for transports that have no implementation yet. */
-export function notImplemented(transport: Transport, id: ProviderId): Provider {
-  const message = `${transport} transport is not implemented yet`;
-  return {
-    id,
-    transport,
-    call: () => Promise.reject(new ProviderError("provider_bad_response", message)),
-    test: async () => ({ ok: false, transport, detail: message }),
-  };
-}
-
-const stub: ProviderFactory = (cfg) => notImplemented(cfg.transport, cfg.id);
-
 export const TRANSPORT_FACTORIES: Record<Transport, ProviderFactory> = {
   mock: (cfg) => createMockProvider(cfg.id),
-  "anthropic-api": stub,
-  "openai-api": stub,
-  "claude-cli": stub,
-  "codex-cli": stub,
+  "anthropic-api": (cfg, deps) => createAnthropicProvider({ apiKey: cfg.apiKey }, deps),
+  "openai-api": (cfg, deps) => createOpenAIProvider({ apiKey: cfg.apiKey }, deps),
+  "claude-cli": (cfg, deps) => createClaudeCliProvider({ cliPath: cfg.cliPath }, deps),
+  "codex-cli": (cfg, deps) => createCodexCliProvider({ cliPath: cfg.cliPath }, deps),
 };

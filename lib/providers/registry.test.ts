@@ -6,7 +6,7 @@ import {
   transportFor,
   type TransportEnv,
 } from "./registry";
-import { uniqueCitations, type ModelRequest } from "./types";
+import { uniqueCitations } from "./types";
 
 const settings = (claude: "cli" | "api", chatgpt: "cli" | "api") => {
   const base = SettingsSchema.parse({});
@@ -67,13 +67,14 @@ describe("createProvider", () => {
   it("builds mock", () => {
     expect(createProvider({ transport: "mock", id: "claude" }).id).toBe("claude");
   });
-  it("placeholder rejects for unimplemented transports", async () => {
-    const p = createProvider({ transport: "anthropic-api", id: "claude" });
-    const r = {} as ModelRequest;
-    await expect(p.call(r, { signal: new AbortController().signal })).rejects.toMatchObject({
-      code: "provider_bad_response",
-    });
-    await expect(p.test(new AbortController().signal)).resolves.toMatchObject({ ok: false });
+  it.each([
+    ["anthropic-api", "claude"],
+    ["openai-api", "chatgpt"],
+    ["claude-cli", "claude"],
+    ["codex-cli", "chatgpt"],
+  ] as const)("builds %s", (transport, id) => {
+    const p = createProvider({ transport, id, apiKey: "k" });
+    expect(p.transport).toBe(transport);
   });
 });
 
