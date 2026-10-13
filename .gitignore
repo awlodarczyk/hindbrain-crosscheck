@@ -19,3 +19,4 @@ data-e2e-hosted/
 data-e2e-live/
 .next-hosted/
 .next-*/
+tests/visual/

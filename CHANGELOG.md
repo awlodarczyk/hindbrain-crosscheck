@@ -16,6 +16,15 @@ First release. Rebuild of the FactCheck Duo 2.0 prototype as a single Next.js ap
 - Mobile layouts and dark theme.
 - Docker image, Dokploy compose with Valkey and a data volume.
 
+### Fixed
+
+- Search now indexes answer text after every run, not only the question.
+- Re-running a paste session (manual or on disagreement) reuses its pasted answers; without any it answers 409 `not_rerunnable`.
+- Claude CLI runs in an empty temp directory with only WebSearch and WebFetch allowed; hosted mode now requires `CLI_ENABLED=0`.
+- History paging uses a `(createdAt, id)` cursor, so sessions sharing a timestamp are no longer skipped.
+- Added Import JSON in Settings and Export Markdown on the session page.
+- The post-login redirect rejects every target outside the app origin.
+
 ### Security
 
 - CSP nonces, CSRF checks, security headers and session cookie renewal.
