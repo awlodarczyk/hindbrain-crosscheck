@@ -16,8 +16,8 @@ import type { RequestContext } from "./request-context";
 export type RouteSpec<B, Q> = {
   auth?: "required" | "none";
   op: OperationName | ((ctx: { bodyBytes: number }) => number);
-  body?: z.ZodType<B>;
-  query?: z.ZodType<Q>;
+  body?: z.ZodType<B, z.ZodTypeDef, unknown>;
+  query?: z.ZodType<Q, z.ZodTypeDef, unknown>;
   maxBodyBytes?: number;
   contentType?: "application/json";
 };

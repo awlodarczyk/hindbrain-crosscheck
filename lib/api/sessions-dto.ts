@@ -41,8 +41,7 @@ const CreateSessionSchema = z
     }
   });
 export type CreateSessionInput = z.output<typeof CreateSessionSchema>;
-export const CreateSessionBody: z.ZodType<CreateSessionInput> =
-  CreateSessionSchema as unknown as z.ZodType<CreateSessionInput>;
+export const CreateSessionBody = CreateSessionSchema;
 
 const ListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
@@ -50,14 +49,12 @@ const ListQuerySchema = z.object({
 });
 
 export type ListQueryInput = z.output<typeof ListQuerySchema>;
-export const ListQuery: z.ZodType<ListQueryInput> =
-  ListQuerySchema as unknown as z.ZodType<ListQueryInput>;
+export const ListQuery = ListQuerySchema;
 
 export const RenameBody = z.object({ title: z.string().trim().min(1).max(200) });
 export const DeleteAllBody = z.object({ confirm: z.literal("DELETE") });
 
 export type SessionListItem = HistoryItem;
-export type CallView = Omit<Call, "html"> & { html: string | null };
 export type SessionDetail = {
   session: Session;
   runs: readonly Run[];
@@ -91,4 +88,13 @@ export function loadBundle(db: Db, userId: string, id: string): SessionDetail | 
       calls.map((c) => c.id),
     ),
   };
+}
+
+/** Joins the texts of the latest run's answer calls for full-text indexing. */
+export function answersTextOf(bundle: SessionDetail): string {
+  const latest = bundle.runs[bundle.runs.length - 1];
+  return bundle.calls
+    .filter((c) => c.runId === latest?.id && c.kind === "answer" && c.text)
+    .map((c) => c.text)
+    .join("\n\n");
 }
