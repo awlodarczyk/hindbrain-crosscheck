@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { ctx } from "../helpers/route-ctx";
 import { defineRoute } from "@/lib/http/route";
 import { errors } from "@/lib/http/errors";
 import { resetDepsForTests, setDepsForTests } from "@/lib/http/deps";
@@ -26,7 +27,7 @@ const post = (body: string, headers: Record<string, string> = {}) =>
   new Request("http://localhost/api/x", {
     method: "POST",
     body,
-    headers: { "content-type": "application/json", ...headers },
+    headers: { "sec-fetch-site": "same-origin", "content-type": "application/json", ...headers },
   });
 
 const echo = defineRoute(
@@ -232,12 +233,10 @@ describe("defineRoute", () => {
     expect((await bad.json()).error.details.issues).toBeInstanceOf(Array);
   });
 
-  it("resolves params promises and plain objects", async () => {
+  it("resolves the params promise", async () => {
     const r = defineRoute({ op: "read" }, ({ params }) => params);
-    const a = await r(new Request("http://localhost/"), { params: Promise.resolve({ id: "1" }) });
+    const a = await r(new Request("http://localhost/"), ctx({ id: "1" }));
     expect((await a.json()).data).toEqual({ id: "1" });
-    const b = await r(new Request("http://localhost/"), { params: { id: "2" } });
-    expect((await b.json()).data).toEqual({ id: "2" });
   });
 
   it("ignores the body of routes without a body spec", async () => {

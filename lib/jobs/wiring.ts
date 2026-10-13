@@ -1,3 +1,4 @@
+import { getDummyHash } from "@/lib/auth/password";
 import { bootstrapAdmin } from "@/lib/auth/bootstrap-admin";
 import { getDb, type Db } from "@/lib/db/client";
 import { PROVIDER_IDS, type ProviderId } from "@/lib/db/enums";
@@ -73,6 +74,7 @@ export function bootOnce(): void {
     log.error({ err: e }, "boot sweep of interrupted calls failed");
   }
   if (isHosted()) {
+    getDummyHash();
     try {
       bootstrapAdmin(getDb(), env);
     } catch (e) {

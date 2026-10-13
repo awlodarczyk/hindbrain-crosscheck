@@ -9,7 +9,7 @@ const HOSTED_SPEC = /hosted-.*\.spec\.ts/;
 
 export default defineConfig({
   testDir: "tests/e2e",
-  use: { baseURL },
+  use: { baseURL, extraHTTPHeaders: { origin: baseURL } },
   webServer: [
     {
       command: `node_modules/.bin/next dev -H 127.0.0.1 -p ${PORT}`,
@@ -54,7 +54,11 @@ export default defineConfig({
     },
     {
       name: "hosted",
-      use: { ...devices["Desktop Chrome"], baseURL: hostedURL },
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: hostedURL,
+        extraHTTPHeaders: { origin: hostedURL },
+      },
       testMatch: HOSTED_SPEC,
     },
   ],

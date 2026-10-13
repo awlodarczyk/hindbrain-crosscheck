@@ -2,7 +2,8 @@ import "server-only";
 import { getDb, type Db } from "@/lib/db/client";
 import { ensureLocalUser, LOCAL_USER_ID } from "@/lib/repos/users";
 
-export type AuthGuard = (req: Request) => Promise<{ userId: string } | null>;
+export type AuthResult = { userId: string; renewed?: boolean; token?: string };
+export type AuthGuard = (req: Request) => Promise<AuthResult | null>;
 
 /** Guard that always resolves the local user, creating its row on first use. */
 export function createLocalAuth(db: Db | (() => Db)): AuthGuard {

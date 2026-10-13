@@ -22,7 +22,7 @@ const allow = {
 const json = (method: string, body?: unknown) =>
   new Request("http://x/api/sessions", {
     method,
-    headers: { "content-type": "application/json" },
+    headers: { "sec-fetch-site": "same-origin", "content-type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 const ctx = (id: string) => ({ params: Promise.resolve({ id }) });

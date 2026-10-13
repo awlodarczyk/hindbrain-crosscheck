@@ -14,6 +14,7 @@ export class HttpError extends Error {
 export const errors = {
   badRequest: (details?: unknown) =>
     new HttpError(400, "validation_failed", "Request is invalid.", details),
+  csrf: (reason: string) => new HttpError(403, "csrf", "Cross-site request blocked.", { reason }),
   unauthorized: () => new HttpError(401, "unauthorized", "Sign in to continue."),
   forbidden: (code = "forbidden", message = "Not allowed.") => new HttpError(403, code, message),
   notFound: () => new HttpError(404, "not_found", "Not found."),

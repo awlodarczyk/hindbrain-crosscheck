@@ -7,6 +7,9 @@ import { resetEnvForTests } from "@/lib/env";
 import { BUDGETS } from "@/lib/rate-limit/weights";
 import { createMemoryLimiter } from "@/lib/rate-limit/memory";
 import { createUser } from "@/lib/repos/users";
+import { authSessions } from "@/lib/db/schema-auth";
+import { SESSION_TTL_MS } from "@/lib/auth/session";
+import { LoginBody } from "@/lib/auth/login-body";
 
 // Exception to "process.env only via lib/env.ts": the env singleton is parsed from process.env on first access.
 const ORIGINAL = { ...process.env };
@@ -47,7 +50,11 @@ afterEach(() => resetDepsForTests());
 const post = (url: string, body?: unknown, cookie?: string) =>
   new Request(`http://localhost${url}`, {
     method: "POST",
-    headers: { "content-type": "application/json", ...(cookie ? { cookie } : {}) },
+    headers: {
+      "content-type": "application/json",
+      "sec-fetch-site": "same-origin",
+      ...(cookie ? { cookie } : {}),
+    },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 const signIn = (password = PASSWORD, email = "admin@example.test") =>
@@ -91,6 +98,32 @@ describe("auth routes", () => {
       mode: "hosted",
     });
     expect((await me.GET(new Request("http://localhost/api/auth/me"))).status).toBe(401);
+  });
+
+  it("accepts a short password in the body and answers 401 generically", async () => {
+    expect(LoginBody.safeParse({ email: "a@b.co", password: "short" }).success).toBe(true);
+    expect((await signIn("short")).status).toBe(401);
+  });
+
+  it("re-issues the cookie when the session is near expiry", async () => {
+    const cookie = cookieOf(await signIn());
+    const soon = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+    db.update(authSessions).set({ expiresAt: soon }).run();
+    const res = await me.GET(new Request("http://localhost/api/auth/me", { headers: { cookie } }));
+    expect(res.status).toBe(200);
+    const header = res.headers.get("set-cookie") ?? "";
+    expect(header).toContain(`${cookie};`);
+    expect(header).toContain(`Max-Age=${SESSION_TTL_MS / 1000}`);
+    const row = db.select().from(authSessions).get();
+    expect(new Date(row?.expiresAt ?? 0).getTime()).toBeGreaterThan(
+      Date.now() + 29 * 24 * 3600 * 1000,
+    );
+  });
+
+  it("does not re-issue the cookie for a fresh session", async () => {
+    const cookie = cookieOf(await signIn());
+    const res = await me.GET(new Request("http://localhost/api/auth/me", { headers: { cookie } }));
+    expect(res.headers.get("set-cookie") ?? "").not.toContain("hc_session=");
   });
 
   it("logout clears the cookie and revokes the session", async () => {

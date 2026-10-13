@@ -22,7 +22,11 @@ const allow = {
 };
 const req = (url: string, init?: RequestInit) => new Request(`http://x${url}`, init);
 const jsonPost = (url: string, body: string, type = "application/json") =>
-  req(url, { method: "POST", headers: { "content-type": type }, body });
+  req(url, {
+    method: "POST",
+    headers: { "sec-fetch-site": "same-origin", "content-type": type },
+    body,
+  });
 const ctx = (id: string) => ({ params: Promise.resolve({ id }) });
 
 async function runSession(question: string): Promise<string> {

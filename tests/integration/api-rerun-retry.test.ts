@@ -30,7 +30,7 @@ const allow = {
 const req = (method: string, body?: unknown) =>
   new Request("http://x/api", {
     method,
-    headers: { "content-type": "application/json" },
+    headers: { "sec-fetch-site": "same-origin", "content-type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 const idCtx = (id: string) => ({ params: Promise.resolve({ id }) });

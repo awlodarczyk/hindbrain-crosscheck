@@ -14,6 +14,9 @@ import {
   issueBrowserId,
   verifyBrowserId,
 } from "@/lib/security/client-id";
+import { sessionCookieHeader } from "@/lib/auth/cookies";
+import { SESSION_TTL_MS } from "@/lib/auth/session";
+import { allowedOriginFor, isSameOriginMutation } from "@/lib/security/csrf";
 import { getAuthGuard, getLimiter, getNow } from "./deps";
 import { errors, isHttpError } from "./errors";
 import { fail, ok } from "./envelope";
@@ -38,24 +41,32 @@ export type RouteArgs<B, Q> = {
 export type RouteHandler<B, Q> = (
   args: RouteArgs<B, Q>,
 ) => Promise<Response | unknown> | Response | unknown;
-type RouteCtx = { params?: Promise<Record<string, string>> | Record<string, string> };
+export type RouteContext = { params: Promise<Record<string, string>> };
+/** Next 15 handler shape; the single-argument overload lets tests call a handler without a context. */
+export type RouteFn = {
+  (req: Request): Promise<Response>;
+  (req: Request, routeCtx: RouteContext): Promise<Response>;
+};
 
 const REQUEST_ID = /^[A-Za-z0-9-]{8,64}$/;
 const ANONYMOUS_USER = "anonymous";
 
-function withHeaders(res: Response, requestId: string, extra: Record<string, string> = {}) {
+function withHeaders(
+  res: Response,
+  requestId: string,
+  extra: Record<string, string> = {},
+  cookies: readonly string[] = [],
+) {
   const headers = new Headers(res.headers);
   headers.set("x-request-id", requestId);
   headers.set("cache-control", "no-store");
   headers.set("x-content-type-options", "nosniff");
-  for (const [k, v] of Object.entries(extra)) {
-    if (k === "set-cookie") headers.append(k, v);
-    else headers.set(k, v);
-  }
+  for (const [k, v] of Object.entries(extra)) headers.set(k, v);
+  for (const c of cookies) headers.append("set-cookie", c);
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
 }
 
-function errorResponse(e: unknown, requestId: string, cookie?: Record<string, string>): Response {
+function errorResponse(e: unknown, requestId: string, cookies: readonly string[]): Response {
   if (isHttpError(e)) {
     const extra: Record<string, string> = {};
     const retry = (e.details as { retryAfterSec?: number } | undefined)?.retryAfterSec;
@@ -63,14 +74,16 @@ function errorResponse(e: unknown, requestId: string, cookie?: Record<string, st
     return withHeaders(
       NextResponse.json(fail(e.code, e.message, e.details), { status: e.status }),
       requestId,
-      { ...extra, ...cookie },
+      extra,
+      cookies,
     );
   }
   log.error({ err: e, requestId }, "unhandled route error");
   return withHeaders(
     NextResponse.json(fail("internal", "Something went wrong."), { status: 500 }),
     requestId,
-    cookie,
+    {},
+    cookies,
   );
 }
 
@@ -82,17 +95,15 @@ function readCookie(req: Request, name: string): string | undefined {
   return undefined;
 }
 
+const isSecure = () => env.APP_URL?.startsWith("https://") ?? false;
+
 /** Verified browser id and age, or a freshly issued id plus the `set-cookie` header to send. */
 function resolveBrowserId(req: Request, now: Date) {
   const secret = deriveKey(env.APP_SECRET, "cookie");
   const valid = verifyBrowserId(secret, readCookie(req, BROWSER_ID_COOKIE), now);
   if (valid) return { id: valid.id, ageSec: valid.ageSec, cookie: undefined };
   const value = issueBrowserId(secret, now);
-  const cookie = {
-    "set-cookie": browserIdCookieHeader(value, {
-      secure: env.APP_URL?.startsWith("https://") ?? false,
-    }),
-  };
+  const cookie = browserIdCookieHeader(value, { secure: isSecure() });
   return { id: value.split(".")[0] ?? value, ageSec: null, cookie };
 }
 
@@ -116,22 +127,32 @@ function chargeFor(
 
 /**
  * Wraps a handler with request id, auth, query/body validation, rate limiting and the response envelope.
- * Order: auth, params, query, body, then limiter (after validation so invalid requests cost nothing), then handler.
+ * Order: csrf, auth, params, query, body, then limiter (after validation so invalid requests cost nothing), then handler.
  */
 export function defineRoute<B = undefined, Q = undefined>(
   spec: RouteSpec<B, Q>,
   handler: RouteHandler<B, Q>,
-): (req: Request, routeCtx?: RouteCtx) => Promise<Response> {
-  return async (req, routeCtx) => {
+): RouteFn {
+  return async (req: Request, routeCtx?: RouteContext) => {
     const header = req.headers.get("x-request-id");
     const requestId = header && REQUEST_ID.test(header) ? header : randomToken(12);
-    let cookie: Record<string, string> | undefined;
+    const cookies: string[] = [];
     try {
       const now = getNow();
       const browser = resolveBrowserId(req, now);
-      cookie = browser.cookie;
+      if (browser.cookie) cookies.push(browser.cookie);
+      const csrf = isSameOriginMutation(req, allowedOriginFor(req, env));
+      if (!csrf.ok) throw errors.csrf(csrf.reason);
       const session = spec.auth === "none" ? null : await getAuthGuard()(req);
       if (spec.auth !== "none" && !session) throw errors.unauthorized();
+      if (session?.renewed && session.token) {
+        cookies.push(
+          sessionCookieHeader(session.token, {
+            secure: isSecure(),
+            maxAgeSec: SESSION_TTL_MS / 1000,
+          }),
+        );
+      }
       const ctx: RequestContext = {
         userId: session?.userId ?? ANONYMOUS_USER,
         ip: clientIp(req, {
@@ -166,13 +187,17 @@ export function defineRoute<B = undefined, Q = undefined>(
       if (!decision.allowed) throw errors.rateLimited(decision.retryAfterSec, decision.layer, cost);
       const result = await handler({ ctx, body: parsed?.value as B, query, req, params });
       const res = result instanceof Response ? result : NextResponse.json(ok(result));
-      return withHeaders(res, requestId, {
-        "x-ratelimit-remaining": String(decision.remaining),
-        "x-ratelimit-cost": String(cost),
-        ...cookie,
-      });
+      return withHeaders(
+        res,
+        requestId,
+        {
+          "x-ratelimit-remaining": String(decision.remaining),
+          "x-ratelimit-cost": String(cost),
+        },
+        cookies,
+      );
     } catch (e) {
-      return errorResponse(e, requestId, cookie);
+      return errorResponse(e, requestId, cookies);
     }
   };
 }

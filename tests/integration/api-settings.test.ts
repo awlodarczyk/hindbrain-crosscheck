@@ -48,7 +48,7 @@ const json = (method: string, body?: unknown) =>
   new Request("http://localhost/api/x", {
     method,
     body: body === undefined ? undefined : JSON.stringify(body),
-    headers: { "content-type": "application/json" },
+    headers: { "sec-fetch-site": "same-origin", "content-type": "application/json" },
   });
 const get = async () => (await settingsRoute.GET(json("GET"))).json();
 

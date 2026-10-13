@@ -13,7 +13,11 @@ describe("hosted guard", () => {
 
   it("resolves the user from the session cookie", async () => {
     const { token } = createAuthSession(db, user.id, { ip: "1.1.1.1", ua: null });
-    expect(await guard(req(`a=b; hc_session=${token}`))).toEqual({ userId: user.id });
+    expect(await guard(req(`a=b; hc_session=${token}`))).toMatchObject({
+      userId: user.id,
+      renewed: false,
+      token,
+    });
   });
   it("returns null without a valid cookie", async () => {
     expect(await guard(req())).toBeNull();
