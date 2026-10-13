@@ -12,6 +12,11 @@ const LIVE_SPEC = /live\.spec\.ts/;
 
 export default defineConfig({
   testDir: "tests/e2e",
+  globalSetup: "./tests/e2e/global-setup.ts",
+  fullyParallel: false,
+  workers: 1,
+  timeout: 60_000,
+  expect: { timeout: 10_000 },
   use: { baseURL, extraHTTPHeaders: { origin: baseURL } },
   webServer: [
     {

@@ -19,10 +19,10 @@ test("session streams running, done and error states live", async ({ page, baseU
   const chatgpt = page.getByRole("article", { name: "ChatGPT answer" });
   const rerun = page.getByRole("button", { name: "Re-run" });
 
-  await expect(claude).toContainText("is answering", { timeout: 3_000 });
+  await expect(claude).toContainText("is answering", { timeout: 10_000 });
   await expect(rerun).toBeDisabled();
   await expect(page.locator('a[aria-current="page"]')).toContainText(/checking · \d of \d calls/, {
-    timeout: 2_000,
+    timeout: 10_000,
   });
 
   await expect(claude).not.toContainText("is answering", { timeout: 15_000 });

@@ -10,7 +10,7 @@ export default defineConfig({
   test: {
     coverage: {
       provider: "v8",
-      include: ["lib/**", "components/**", "app/api/**"],
+      include: ["lib/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "app/api/**/*.{ts,tsx}"],
       exclude: ["**/*.test.*"],
       thresholds: { lines: 80, branches: 80, functions: 80, statements: 80 },
     },
