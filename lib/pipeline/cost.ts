@@ -39,7 +39,6 @@ const EFFORT_MULTIPLIER: Record<Settings["reasoningEffort"], number> = {
   max: 2.5,
 };
 
-
 /**
  * Estimated USD cost of one provider call.
  *
