@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SettingsView } from "@/lib/api/settings-dto";
@@ -78,5 +78,27 @@ describe("KeyField", () => {
   it("shows Remove for db keys", () => {
     setup(base);
     expect(screen.getByRole("button", { name: /remove/i })).toBeInTheDocument();
+  });
+
+  it("clears the reveal timer on unmount", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    setup(base);
+    const { unmount } = { unmount: () => cleanup() };
+    await userEvent
+      .setup({ advanceTimers: vi.advanceTimersByTime })
+      .click(screen.getByRole("button", { name: /reveal/i }));
+    await screen.findByText("sk-ant-plain-secret");
+    expect(vi.getTimerCount()).toBeGreaterThan(0);
+    unmount();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("trims the key before validating and submitting", async () => {
+    const user = userEvent.setup();
+    const props = setup(base);
+    await user.click(screen.getByRole("button", { name: "Replace" }));
+    await user.type(screen.getByLabelText(/api key/i), `  ${"x".repeat(24)}  `);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(props.onReplace).toHaveBeenCalledWith("x".repeat(24));
   });
 });

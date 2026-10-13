@@ -4,6 +4,7 @@ import { RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { HistoryItem } from "@/components/shell/group-by-day";
+import { useSessionListActions } from "@/components/shell/session-list-context";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api/client";
 import { Section } from "./section";
@@ -17,6 +18,7 @@ export function DeletedList() {
   const [failed, setFailed] = useState(false);
   const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
   const mounted = useRef(true);
+  const { refresh } = useSessionListActions();
 
   const load = useCallback(async () => {
     setFailed(false);
@@ -52,9 +54,9 @@ export function DeletedList() {
       if (!mounted.current) return;
       setItems((cur) => (cur ?? []).filter((i) => i.id !== id));
       toast.success("Session restored");
-      window.dispatchEvent(new Event("hc:history-changed"));
+      void refresh();
     },
-    [pending],
+    [pending, refresh],
   );
 
   return (
@@ -80,7 +82,7 @@ export function DeletedList() {
           <div className="min-w-0">
             <div className="truncate text-[13px] font-medium text-text-primary">{i.question}</div>
             <div className="font-mono text-[12px] text-text-muted">
-              created {dateOf(i.createdAt)}
+              {i.deletedAt ? `deleted ${dateOf(i.deletedAt)}` : `created ${dateOf(i.createdAt)}`}
             </div>
           </div>
           <Button

@@ -19,6 +19,8 @@ type Props = {
   description: string;
   label: string;
   minLength: number;
+  /** Trim surrounding whitespace before validating and submitting. */
+  trim?: boolean;
   submitLabel: string;
   onSubmit: (value: string) => Promise<void>;
 };
@@ -31,6 +33,7 @@ export function SecretDialog({
   description,
   label,
   minLength,
+  trim = false,
   submitLabel,
   onSubmit,
 }: Props) {
@@ -48,13 +51,14 @@ export function SecretDialog({
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (value.length < minLength) {
+    const secret = trim ? value.trim() : value;
+    if (secret.length < minLength) {
       setMessage(`Enter at least ${minLength} characters.`);
       return;
     }
     setPending(true);
     try {
-      await onSubmit(value);
+      await onSubmit(secret);
       close(false);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Something went wrong.");

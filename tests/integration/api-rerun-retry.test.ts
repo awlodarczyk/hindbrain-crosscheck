@@ -136,10 +136,15 @@ describe("deleted list and restore", () => {
     const id = await createId({ question: "zebra stripes" });
     await runner.drain();
     const items = async () =>
-      ((await (await deletedList(req("GET"))).json()) as { data: { id: string }[] }).data;
+      (
+        (await (await deletedList(req("GET"))).json()) as {
+          data: { id: string; deletedAt?: string }[];
+        }
+      ).data;
     expect(await items()).toEqual([]);
     await deleteOne(req("DELETE"), idCtx(id));
     expect((await items()).map((i) => i.id)).toEqual([id]);
+    expect((await items())[0]?.deletedAt).toEqual(expect.any(String));
 
     expect((await restore(req("POST"), idCtx(id))).status).toBe(200);
     const l = (await (await list(new Request("http://x/api/sessions"))).json()) as {

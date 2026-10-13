@@ -50,6 +50,14 @@ describe("ProviderCard", () => {
     );
   });
 
+  it("renders API rows with a notice for a stored cli connection in hosted mode", () => {
+    setup({ cliAllowed: false, connection: "cli" });
+    expect(
+      screen.getByText(/CLI connections are not available in hosted mode/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Anthropic credentials" })).toBeInTheDocument();
+  });
+
   it.each([
     ["api key present", { secret: db }, "Connected"],
     ["no key", { secret: none }, "Not connected"],

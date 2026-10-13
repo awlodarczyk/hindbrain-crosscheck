@@ -146,6 +146,8 @@ describe("applyEvent", () => {
       disputed: 0,
     });
     expect(next.session.status).toBe("partial");
+    expect(next.runs.at(-1)?.status).toBe("partial");
+    expect(next.runs.at(-1)?.finishedAt).not.toBeNull();
   });
 
   it("ignores events for unknown call ids without changing identity", () => {

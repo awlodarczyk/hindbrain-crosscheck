@@ -100,4 +100,23 @@ describe("useSettings", () => {
     await act(async () => result.current.removeKey("claude"));
     expect(s.get).toHaveBeenCalledTimes(2);
   });
+
+  it("flushes a pending save on unmount and reports a failure", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    s.put.mockRejectedValue(new Error("offline"));
+    const { result, unmount } = renderHook(() => useSettings(initial));
+    act(() => result.current.update({ cost: { maxSearchesPerCall: 5 } }));
+    unmount();
+    expect(s.put).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(warn).toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith("offline");
+    warn.mockRestore();
+  });
+
+  it("does not flush on unmount when nothing is pending", () => {
+    const { unmount } = renderHook(() => useSettings(initial));
+    unmount();
+    expect(s.put).not.toHaveBeenCalled();
+  });
 });

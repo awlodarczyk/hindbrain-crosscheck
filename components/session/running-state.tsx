@@ -12,7 +12,7 @@ export function StatusRow({ label, running = true }: { label: string; running?: 
     >
       <span
         aria-hidden
-        className={`size-2 rounded-full ${running ? "animate-pulse bg-status-running" : "bg-border-default"}`}
+        className={`size-2 rounded-full ${running ? "animate-pulse motion-reduce:animate-none bg-status-running" : "bg-border-default"}`}
       />
       {label}
     </p>

@@ -1,5 +1,5 @@
 import type { SessionDetail } from "@/lib/api/sessions-dto";
-import type { CallKind, ProviderId } from "@/lib/db/enums";
+import type { CallKind, ProviderId, SessionStatus } from "@/lib/db/enums";
 import type { RunEvent } from "@/lib/pipeline/events";
 import { PROVIDER_LABEL } from "@/lib/pipeline/prompts";
 import type { Call, Run } from "@/lib/repos/types";
@@ -80,6 +80,16 @@ function startCall(
   };
 }
 
+function finishRun(d: SessionDetail, status: SessionStatus): SessionDetail {
+  const last = d.runs.length - 1;
+  const finishedAt = new Date().toISOString();
+  return {
+    ...d,
+    session: { ...d.session, status },
+    runs: d.runs.map((r, i) => (i === last ? { ...r, status, finishedAt } : r)),
+  };
+}
+
 /**
  * Pure reducer for live run events. Every handled branch returns a new object;
  * unknown event types and events for unknown calls return `detail` unchanged.
@@ -112,7 +122,7 @@ export function applyEvent(detail: SessionDetail, e: RunEvent): SessionDetail {
     case "session.stats":
       return { ...detail, session: { ...detail.session, stats: e.stats, status: e.status } };
     case "session.done":
-      return { ...detail, session: { ...detail.session, status: e.status } };
+      return finishRun(detail, e.status);
     default:
       return detail;
   }

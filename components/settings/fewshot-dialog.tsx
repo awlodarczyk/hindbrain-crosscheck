@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, X } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,6 +17,8 @@ import { Textarea } from "@/components/ui/textarea";
 export type FewShot = { question: string; answer: string };
 export const MAX_EXAMPLES = 5;
 
+type Keyed = FewShot & { id: number };
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -29,15 +31,22 @@ function Editor({
   onSave,
   onCancel,
 }: Omit<Props, "open" | "onOpenChange"> & { onCancel: () => void }) {
-  const [draft, setDraft] = useState<readonly FewShot[]>(examples);
+  const nextId = useRef(examples.length);
+  const [draft, setDraft] = useState<readonly Keyed[]>(() =>
+    examples.map((e, i) => ({ ...e, id: i })),
+  );
   const edit = (i: number, patch: Partial<FewShot>) =>
     setDraft(draft.map((e, j) => (j === i ? { ...e, ...patch } : e)));
+  const complete = (): FewShot[] =>
+    draft
+      .filter((e) => e.question.trim() && e.answer.trim())
+      .map(({ question, answer }) => ({ question, answer }));
   return (
     <>
       <div className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto">
         {draft.map((ex, i) => (
           <div
-            key={i}
+            key={ex.id}
             className="flex flex-col gap-2 rounded-control border border-border-default p-3"
           >
             <div className="flex items-center gap-2">
@@ -70,7 +79,7 @@ function Editor({
         variant="secondary"
         className="self-start"
         disabled={draft.length >= MAX_EXAMPLES}
-        onClick={() => setDraft([...draft, { question: "", answer: "" }])}
+        onClick={() => setDraft([...draft, { id: nextId.current++, question: "", answer: "" }])}
       >
         <Plus className="size-4" />
         Add example
@@ -79,9 +88,7 @@ function Editor({
         <Button variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
-        <Button onClick={() => onSave(draft.filter((e) => e.question.trim() || e.answer.trim()))}>
-          Save
-        </Button>
+        <Button onClick={() => onSave(complete())}>Save</Button>
       </DialogFooter>
     </>
   );

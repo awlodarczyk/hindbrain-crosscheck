@@ -118,6 +118,7 @@ describe("ModelsView", () => {
     await userEvent.click(screen.getByRole("button", { name: "Edit examples" }));
     await userEvent.click(screen.getByRole("button", { name: "Add example" }));
     await userEvent.type(screen.getByLabelText("Question 1"), "q");
+    await userEvent.type(screen.getByLabelText("Answer 1"), "a");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(screen.getByText("1 example")).toBeInTheDocument();
   });

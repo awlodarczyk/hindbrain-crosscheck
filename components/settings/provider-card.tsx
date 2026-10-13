@@ -127,7 +127,9 @@ function ApiRows(props: ProviderCardProps) {
 }
 
 /** One provider: connection toggle, CLI or API-key rows and a status badge. */
-export function ProviderCard(props: ProviderCardProps) {
+export function ProviderCard(raw: ProviderCardProps) {
+  const cliBlocked = !raw.cliAllowed && raw.connection === "cli";
+  const props: ProviderCardProps = cliBlocked ? { ...raw, connection: "api" } : raw;
   const { provider, connection, secret, cli } = props;
   const connected = isConnected(connection, secret, cli);
   return (
@@ -147,6 +149,11 @@ export function ProviderCard(props: ProviderCardProps) {
       <Row title="Connection" sub="How crosscheck reaches the model">
         <ConnectionToggle {...props} />
       </Row>
+      {cliBlocked && (
+        <p className="px-4 py-2 text-sm text-text-secondary md:text-[12px]">
+          CLI connections are not available in hosted mode; using API key.
+        </p>
+      )}
       {connection === "cli" ? <CliRows {...props} /> : <ApiRows {...props} />}
     </section>
   );

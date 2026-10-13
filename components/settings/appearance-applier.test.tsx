@@ -3,10 +3,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppearanceApplier } from "./appearance-applier";
 
 const setTheme = vi.hoisted(() => vi.fn());
-vi.mock("next-themes", () => ({ useTheme: () => ({ setTheme }) }));
+const identity = vi.hoisted(() => ({ fresh: false }));
+vi.mock("next-themes", () => ({
+  useTheme: () => ({ setTheme: identity.fresh ? (t: string) => setTheme(t) : setTheme }),
+}));
 
 const root = document.documentElement;
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  identity.fresh = false;
+});
 afterEach(() => root.classList.remove("reduce-motion"));
 
 describe("AppearanceApplier", () => {
@@ -42,5 +48,16 @@ describe("AppearanceApplier", () => {
       window.dispatchEvent(new CustomEvent("hc:appearance-changed", { detail: { theme: "dark" } }));
     });
     expect(setTheme).toHaveBeenCalledTimes(1);
+  });
+
+  it("applies the initial value once even when setTheme changes identity", () => {
+    identity.fresh = true;
+    const initial = { theme: "light", reduceMotion: false } as const;
+    const { rerender } = render(<AppearanceApplier initial={initial} />);
+    act(() => {
+      window.dispatchEvent(new CustomEvent("hc:appearance-changed", { detail: { theme: "dark" } }));
+    });
+    rerender(<AppearanceApplier initial={initial} />);
+    expect(setTheme.mock.calls.map((c) => c[0])).toEqual(["light", "dark"]);
   });
 });

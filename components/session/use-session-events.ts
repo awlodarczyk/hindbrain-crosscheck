@@ -59,13 +59,15 @@ export function useSessionEvents(
   const failures = useRef(0);
   const refetchTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const alive = useRef(true);
+  const seq = useRef(0);
 
   const scheduleRefetch = useCallback(() => {
     clearTimeout(refetchTimer.current);
     refetchTimer.current = setTimeout(() => {
       const fetcher = optsRef.current.refetch ?? ((sid: string) => api.sessions.get(sid));
+      const mine = ++seq.current;
       fetcher(id)
-        .then((d) => alive.current && setDetail(d))
+        .then((d) => alive.current && mine === seq.current && setDetail(d))
         .catch((e: unknown) => console.warn("session refetch failed", e));
     }, REFETCH_DEBOUNCE_MS);
   }, [id]);
@@ -95,6 +97,7 @@ export function useSessionEvents(
       const snap = parse<SessionDetail>(ev);
       if (!snap) return;
       failures.current = 0;
+      seq.current += 1;
       setConnection("open");
       setDetail(snap);
     });
@@ -103,6 +106,7 @@ export function useSessionEvents(
         const e = parse<RunEvent>(ev);
         if (!e) return;
         failures.current = 0;
+        seq.current += 1;
         setDetail((d) => applyEvent(d, e));
         optsRef.current.onEvent?.(e);
         if (type === "call.done" || type === "session.done") scheduleRefetch();
@@ -116,7 +120,11 @@ export function useSessionEvents(
     source.onerror = () => {
       source.close();
       failures.current += 1;
-      if (failures.current >= MAX_FAILURES) return setConnection("error");
+      if (failures.current >= MAX_FAILURES) {
+        setConnection("error");
+        scheduleRefetch();
+        return;
+      }
       setConnection("connecting");
       const delay = Math.min(BACKOFF_START_MS * 2 ** (failures.current - 1), BACKOFF_MAX_MS);
       retry = setTimeout(() => setAttempt((n) => n + 1), delay);

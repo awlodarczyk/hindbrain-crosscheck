@@ -84,7 +84,10 @@ export function useSettings(initial: SettingsView) {
     () => () => {
       if (timer.current) {
         clearTimeout(timer.current);
-        void api.settings.put(latest.current).catch(() => undefined);
+        api.settings.put(latest.current).catch((e: unknown) => {
+          console.warn("settings flush on unmount failed", e);
+          toast.error(messageOf(e));
+        });
       }
     },
     [],

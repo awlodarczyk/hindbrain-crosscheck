@@ -47,4 +47,21 @@ describe("FewShotDialog", () => {
     expect(onSave).not.toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
+
+  it("drops half-filled pairs on save", async () => {
+    const { onSave } = setup([{ question: "q1", answer: "a1" }]);
+    await userEvent.click(screen.getByRole("button", { name: "Add example" }));
+    await userEvent.type(screen.getByLabelText("Question 2"), "only question");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(onSave).toHaveBeenCalledWith([{ question: "q1", answer: "a1" }]);
+  });
+
+  it("keeps field values with their example after removing an earlier one", async () => {
+    setup([
+      { question: "q1", answer: "a1" },
+      { question: "q2", answer: "a2" },
+    ]);
+    await userEvent.click(screen.getByRole("button", { name: "Remove example 1" }));
+    expect(screen.getByLabelText("Answer 1")).toHaveValue("a2");
+  });
 });

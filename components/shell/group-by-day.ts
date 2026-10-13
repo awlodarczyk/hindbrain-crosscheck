@@ -7,6 +7,8 @@ export type HistoryItem = {
   callsDone: number;
   callsTotal: number;
   createdAt: string;
+  /** Set only on soft-deleted sessions. */
+  deletedAt?: string;
 };
 
 export type HistoryGroupLabel = "Today" | "Yesterday" | "Last 7 days" | "Older";

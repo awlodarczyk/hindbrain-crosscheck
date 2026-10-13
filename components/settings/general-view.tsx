@@ -3,6 +3,7 @@
 import { Copy, Download } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useSessionListActions } from "@/components/shell/session-list-context";
 import { Button } from "@/components/ui/button";
 import { Segmented } from "@/components/ui/segmented";
 import {
@@ -163,6 +164,7 @@ export function AppearanceSection() {
 export function DataSection() {
   const { view, dataDir } = useSettingsView();
   const router = useRouter();
+  const { refresh } = useSessionListActions();
   const local = view.mode === "local" && dataDir !== null;
   const dbPath = local ? `${dataDir}/crosscheck.db` : null;
   const deleteAll = async () => {
@@ -173,7 +175,7 @@ export function DataSection() {
       throw e;
     }
     toast.success("History deleted");
-    window.dispatchEvent(new Event("hc:history-changed"));
+    void refresh();
     router.refresh();
   };
   return (

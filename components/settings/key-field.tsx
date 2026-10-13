@@ -115,6 +115,7 @@ export function KeyField({
         description="The key is encrypted before it is stored."
         label={`${name} API key`}
         minLength={MIN_KEY_LENGTH}
+        trim
         submitLabel="Save"
         onSubmit={onReplace}
       />

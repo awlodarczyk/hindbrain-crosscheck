@@ -169,4 +169,49 @@ describe("useSessionEvents", () => {
     expect(FakeES.all.length).toBe(n + 1);
     expect(es().closed).toBe(false);
   });
+  it("ignores a slow refetch that resolves after a newer event", async () => {
+    let resolve!: (d: SessionDetail) => void;
+    const initial = running();
+    const refetch = vi.fn(() => new Promise<SessionDetail>((r) => (resolve = r)));
+    const hook = renderHook(() =>
+      useSessionEvents("s1", initial, { refetch, EventSourceImpl: Impl }),
+    );
+    act(() => FakeES.all[0]!.emit("call.done", done("c1")));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    act(() =>
+      FakeES.all[0]!.emit("call.progress", {
+        type: "call.progress",
+        sessionId: "s1",
+        callId: "c1",
+        phase: "searching",
+        searches: 7,
+      }),
+    );
+    await act(async () => resolve({ ...initial, session: { ...initial.session, title: "stale" } }));
+    expect(hook.result.current.detail.session.title).not.toBe("stale");
+    expect(hook.result.current.detail.calls[0]?.searches).toBe(7);
+  });
+
+  it("refetches when the connection ends in error", async () => {
+    const { refetch, hook, es } = setup();
+    for (let i = 0; i < 3; i++) {
+      act(() => es().onerror?.());
+      act(() => vi.advanceTimersByTime(8000));
+    }
+    expect(hook.result.current.connection).toBe("error");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("setDetail accepts an updater", () => {
+    const { hook } = setup();
+    act(() =>
+      hook.result.current.setDetail((d) => ({ ...d, session: { ...d.session, title: "u" } })),
+    );
+    expect(hook.result.current.detail.session.title).toBe("u");
+  });
 });

@@ -15,5 +15,5 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
   const detail = loadBundle(db, userId, id);
   if (!detail) notFound();
   const view = await buildSettingsView(db, userId);
-  return <SessionView initial={detail} settings={view.settings} models={view.models} />;
+  return <SessionView key={id} initial={detail} settings={view.settings} models={view.models} />;
 }
