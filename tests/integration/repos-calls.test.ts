@@ -75,6 +75,9 @@ describe("calls", () => {
     expect(getCall(db, c.id)).toEqual(u);
     db.$client.prepare("update calls set citations = '{bad' where id = ?").run(c.id);
     expect(getCall(db, c.id)?.citations).toEqual([]);
+    db.$client.prepare("update calls set citations = '[{\"title\":1}]' where id = ?").run(c.id);
+    expect(getCall(db, c.id)?.citations).toEqual([]);
+    expect(Object.isFrozen(u.citations[0])).toBe(true);
     expect(() => updateCall(db, "missing", {})).toThrow();
   });
 

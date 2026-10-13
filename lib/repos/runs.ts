@@ -15,6 +15,7 @@ export function createRun(
   reason: RunReason,
   now = () => new Date(),
 ): Run {
+  // better-sqlite3 runs the callback synchronously on the single connection, so db.* calls inside are part of the transaction.
   return db.transaction((tx) => {
     const top = tx
       .select({ n: max(runs.attempt) })

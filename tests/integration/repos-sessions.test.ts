@@ -4,6 +4,7 @@ import { createTestDb } from "@/lib/db/test-db";
 import { users } from "@/lib/db/schema";
 import { createCall, updateCall } from "@/lib/repos/calls";
 import { replaceClaims } from "@/lib/repos/claims";
+import { EMPTY_STATS } from "@/lib/repos/types";
 import { createRun } from "@/lib/repos/runs";
 import {
   createSession,
@@ -120,5 +121,7 @@ describe("sessions repo", () => {
     const s = mk("u1", 1);
     db.$client.prepare("update sessions set stats = 'nope' where id = ?").run(s.id);
     expect(getSession(db, "u1", s.id)?.stats.claims).toBe(0);
+    db.$client.prepare('update sessions set stats = \'{"claims":"x"}\' where id = ?').run(s.id);
+    expect(getSession(db, "u1", s.id)?.stats).toEqual({ ...EMPTY_STATS });
   });
 });

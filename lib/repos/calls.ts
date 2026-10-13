@@ -1,5 +1,6 @@
 import { asc, eq, sql } from "drizzle-orm";
 import { ulid } from "ulid";
+import { z } from "zod";
 import type { Db } from "@/lib/db/client";
 import { calls, runs } from "@/lib/db/schema";
 import type { Call, Citation, NewCall } from "./types";
@@ -7,17 +8,18 @@ import type { Call, Citation, NewCall } from "./types";
 type Row = typeof calls.$inferSelect;
 const rowid = sql`calls.rowid`;
 
+const citationsSchema = z.array(z.object({ title: z.string(), url: z.string() }));
+
 function parseCitations(raw: string): readonly Citation[] {
   try {
-    const v: unknown = JSON.parse(raw);
-    return Array.isArray(v) ? (v as Citation[]) : [];
+    const parsed = citationsSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? Object.freeze(parsed.data.map((c) => Object.freeze(c))) : [];
   } catch {
     return [];
   }
 }
 
-const toCall = (r: Row): Call =>
-  Object.freeze({ ...r, citations: Object.freeze(parseCitations(r.citations)) });
+const toCall = (r: Row): Call => Object.freeze({ ...r, citations: parseCitations(r.citations) });
 
 const toRow = (c: Partial<Call>): Partial<Row> => {
   const { citations, ...rest } = c;
@@ -28,7 +30,12 @@ const toRow = (c: Partial<Call>): Partial<Row> => {
 export function createCall(db: Db, input: NewCall): Call {
   const row = db
     .insert(calls)
-    .values({ status: "queued", ...toRow(input), id: ulid() } as typeof calls.$inferInsert)
+    .values({
+      ...input,
+      id: ulid(),
+      status: input.status ?? "queued",
+      citations: JSON.stringify(input.citations ?? []),
+    })
     .returning()
     .get();
   return toCall(row);

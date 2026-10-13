@@ -1,5 +1,6 @@
 import { and, desc, eq, isNotNull, isNull, lt } from "drizzle-orm";
 import { ulid } from "ulid";
+import { z } from "zod";
 import type { SessionMode, SessionStatus } from "@/lib/db/enums";
 import type { Db } from "@/lib/db/client";
 import { sessions } from "@/lib/db/schema";
@@ -21,11 +22,22 @@ function parseJson(raw: string): unknown {
   }
 }
 
+const statsSchema = z.object({
+  claims: z.number(),
+  supported: z.number(),
+  disputed: z.number(),
+  partial: z.number(),
+  unverifiable: z.number(),
+  calls: z.number(),
+  callsDone: z.number(),
+  searches: z.number(),
+  durationMs: z.number(),
+  costUsd: z.number().nullable(),
+});
+
 function parseStats(raw: string): SessionStats {
-  const v = parseJson(raw);
-  return v && typeof v === "object" && "claims" in v
-    ? Object.freeze({ ...EMPTY_STATS, ...(v as Partial<SessionStats>) })
-    : EMPTY_STATS;
+  const parsed = statsSchema.partial().safeParse(parseJson(raw));
+  return parsed.success ? Object.freeze({ ...EMPTY_STATS, ...parsed.data }) : EMPTY_STATS;
 }
 
 const toSession = (r: Row): Session =>
@@ -157,6 +169,10 @@ export function restoreSession(
   return row ? toSession(row) : null;
 }
 
+/**
+ * Internal pipeline function keyed by session id only; call it after the caller has verified
+ * ownership of the session.
+ */
 export function setSessionStatus(
   db: Db,
   id: string,
@@ -169,8 +185,13 @@ export function setSessionStatus(
     .run();
 }
 
-/** Recomputes stats and status from the latest run's calls and claims, and persists them. */
+/**
+ * Recomputes stats and status from the latest run's calls and claims, and persists them.
+ * Internal pipeline function keyed by session id only; call it after the caller has verified
+ * ownership of the session.
+ */
 export function recomputeStats(db: Db, id: string, now: Now = defaultNow): SessionStats {
+  // better-sqlite3 runs the callback synchronously on the single connection, so db.* calls inside are part of the transaction.
   return db.transaction(() => {
     const run = latestRun(db, id);
     const calls = run ? listCalls(db, run.id) : [];
