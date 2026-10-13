@@ -1,0 +1,9 @@
+title = "hindbrain crosscheck gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documented test values and example env file"
+regexes = ['''test-secret-32-bytes-minimum-length!!''']
+paths = ['''^\.env\.example$''', '''^designs/.*\.pen$''']

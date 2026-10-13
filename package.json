@@ -16,7 +16,9 @@
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "e2e": "playwright test",
-    "check": "pnpm lint && pnpm typecheck && pnpm test"
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "prettier --check . && eslint . && tsc --noEmit && vitest run --coverage"
   },
   "dependencies": {
     "next": "15",
@@ -39,8 +41,10 @@
     "eslint-config-next": "15",
     "jsdom": "^30.1.2",
     "postcss": "^8.5.30",
+    "prettier": "^3.9.10",
     "tailwindcss": "4",
     "typescript": "^5.9.3",
-    "vitest": "^5.0.4"
+    "vitest": "^5.0.4",
+    "yaml": "^2.9.1"
   }
 }

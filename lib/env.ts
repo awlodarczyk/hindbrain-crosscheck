@@ -26,7 +26,11 @@ export const EnvSchema = z
     if (e.APP_MODE !== "hosted") return;
     for (const key of HOSTED_REQUIRED) {
       if (e[key] === undefined) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [key], message: "required when APP_MODE=hosted" });
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: "required when APP_MODE=hosted",
+        });
       }
     }
   });
@@ -53,5 +57,7 @@ export function parseEnv(raw: Readonly<Record<string, string | undefined>>): Env
 
 /** Parsed once at import. Under Vitest a missing APP_SECRET falls back to a fixed test value. */
 export const env: Env = parseEnv(
-  process.env.VITEST && !process.env.APP_SECRET ? { ...process.env, APP_SECRET: TEST_APP_SECRET } : process.env,
+  process.env.VITEST && !process.env.APP_SECRET
+    ? { ...process.env, APP_SECRET: TEST_APP_SECRET }
+    : process.env,
 );
