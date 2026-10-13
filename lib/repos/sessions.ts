@@ -213,3 +213,15 @@ export function recomputeStats(db: Db, id: string, now: Now = defaultNow): Sessi
     return stats;
   });
 }
+
+/** Soft-deletes every live session of the user and returns their ids. */
+export function softDeleteAllSessions(db: Db, userId: string, now: Now = defaultNow): string[] {
+  const ts = now().toISOString();
+  return db
+    .update(sessions)
+    .set({ deletedAt: ts, updatedAt: ts })
+    .where(and(eq(sessions.userId, userId), isNull(sessions.deletedAt)))
+    .returning({ id: sessions.id })
+    .all()
+    .map((r) => r.id);
+}

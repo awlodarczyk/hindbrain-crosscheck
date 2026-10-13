@@ -1,12 +1,16 @@
 import "server-only";
 import { localAuth, type AuthGuard } from "@/lib/auth/guard";
+import { getDb, type Db } from "@/lib/db/client";
 import { env } from "@/lib/env";
+import type { Bus } from "@/lib/jobs/bus";
+import { getBus, getRunner } from "@/lib/jobs/wiring";
+import type { Runner } from "@/lib/jobs/runner";
 import { isHosted } from "@/lib/mode";
 import { createMemoryLimiter } from "@/lib/rate-limit/memory";
 import type { RateLimiter } from "@/lib/rate-limit/types";
 import { errors } from "./errors";
 
-type Deps = { limiter?: RateLimiter; auth?: AuthGuard };
+type Deps = { limiter?: RateLimiter; auth?: AuthGuard; db?: Db; runner?: Runner; bus?: Bus };
 const g = globalThis as typeof globalThis & { __hcDeps?: Deps; __hcOverrides?: Deps };
 
 const valkeyConfigured = () => Boolean(env.VALKEY_URL) && !env.VALKEY_URL?.startsWith("memory://");
@@ -29,6 +33,10 @@ export function getLimiter(): RateLimiter {
 export function getAuthGuard(): AuthGuard {
   return g.__hcOverrides?.auth ?? (isHosted() ? hostedGuardPlaceholder : localAuth);
 }
+
+export const getRequestDb = (): Db => g.__hcOverrides?.db ?? getDb();
+export const getRequestRunner = (): Runner => g.__hcOverrides?.runner ?? getRunner();
+export const getRequestBus = (): Bus => g.__hcOverrides?.bus ?? getBus();
 
 /** Overrides take precedence over the real singletons until reset; later calls merge. */
 export function setDepsForTests(overrides: Deps): void {
