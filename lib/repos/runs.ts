@@ -67,3 +67,13 @@ export function finishRun(db: Db, id: string, status: RunStatus, now = () => new
 export function setRunStatus(db: Db, id: string, status: RunStatus): void {
   db.update(runs).set({ status }).where(eq(runs.id, id)).run();
 }
+
+/** Inserts a run with an explicit attempt and timestamps (used by import). */
+export function insertRun(db: Db, input: Omit<Run, "id">): Run {
+  const row = db
+    .insert(runs)
+    .values({ ...input, id: ulid() })
+    .returning()
+    .get();
+  return toRun(row);
+}
