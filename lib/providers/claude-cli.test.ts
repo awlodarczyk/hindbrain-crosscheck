@@ -72,6 +72,12 @@ describe("CLAUDE_ARGS", () => {
     expect(a).toContain("--allowedTools WebSearch,WebFetch");
     expect(a).toContain("--disallowedTools Bash,Edit,Write,MultiEdit,NotebookEdit");
   });
+
+  it("scales max turns with the search budget", () => {
+    const a = CLAUDE_ARGS(req).join(" ");
+    expect(a).toContain("--max-turns 12");
+    expect(CLAUDE_ARGS({ ...req, maxSearches: 20 }).join(" ")).toContain("--max-turns 40");
+  });
 });
 
 describe("createClaudeCliProvider", () => {
@@ -125,6 +131,23 @@ describe("createClaudeCliProvider", () => {
       detail: "Connected",
       path: "/bin/claude",
     });
+  });
+
+  it("explains a turn-limit failure from the json on stdout", async () => {
+    const p = createClaudeCliProvider(
+      { cliPath: "/bin/claude" },
+      {
+        spawn: fakeSpawn({
+          stdout: '{"type":"result","subtype":"error_max_turns","is_error":true,"num_turns":6}',
+          code: 1,
+        }),
+      },
+    );
+    await expect(p.call(req, { signal })).rejects.toMatchObject({
+      code: "cli_failed",
+      message: expect.stringContaining("turn limit"),
+    });
+    vi.restoreAllMocks();
   });
 
   it("propagates cli_failed from is_error", async () => {

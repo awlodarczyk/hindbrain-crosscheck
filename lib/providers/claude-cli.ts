@@ -26,7 +26,9 @@ import type {
 
 const TEST_MODEL = "claude-haiku-5-5";
 const TEST_TIMEOUT_MS = 60_000;
-const MAX_TURNS = "6";
+/** Each web search costs a tool-use turn; the budget scales with the search allowance, capped at 40. */
+const MAX_TURNS_CAP = 40;
+const maxTurnsFor = (req: ModelRequest) => String(Math.min(MAX_TURNS_CAP, req.maxSearches * 2 + 6));
 const ALLOWED_TOOLS = "WebSearch,WebFetch";
 const DISALLOWED_TOOLS = "Bash,Edit,Write,MultiEdit,NotebookEdit";
 
@@ -50,7 +52,7 @@ export const CLAUDE_ARGS = (req: ModelRequest): readonly string[] => [
   "--append-system-prompt",
   req.system,
   "--max-turns",
-  MAX_TURNS,
+  maxTurnsFor(req),
   "--allowedTools",
   ALLOWED_TOOLS,
   "--disallowedTools",
@@ -87,6 +89,33 @@ export function parseClaudeCliOutput(stdout: string) {
   };
 }
 
+const failureSchema = z.object({ subtype: z.string().optional(), result: z.string().optional() });
+
+/** Turns a non-zero exit into a message from the JSON claude prints on stdout, when there is one. */
+export function explainCliFailure(err: ProviderError, req: ModelRequest): ProviderError {
+  if (err.code !== "cli_failed" || typeof err.stdout !== "string") return err;
+  let parsed: z.infer<typeof failureSchema> | undefined;
+  try {
+    const r = failureSchema.safeParse(JSON.parse(err.stdout));
+    parsed = r.success ? r.data : undefined;
+  } catch {
+    parsed = undefined;
+  }
+  if (!parsed?.subtype) return err;
+  if (parsed.subtype === "error_max_turns") {
+    return new ProviderError(
+      "cli_failed",
+      `claude hit the turn limit (${maxTurnsFor(req)} turns) before finishing; lower the search budget or retry.`,
+      { cause: err },
+    );
+  }
+  return new ProviderError(
+    "cli_failed",
+    `claude failed: ${parsed.subtype}${parsed.result ? ` — ${parsed.result.slice(0, 300)}` : ""}`,
+    { cause: err },
+  );
+}
+
 const withDomains = (req: ModelRequest) =>
   req.preferredDomains.length
     ? `${req.user}\n\nPrefer sources from: ${req.preferredDomains.join(", ")}.`
@@ -115,6 +144,8 @@ export function createClaudeCliProvider(
         onStderrLine: onLine,
         cwd: dir,
       });
+    } catch (e) {
+      throw e instanceof ProviderError ? explainCliFailure(e, req) : e;
     } finally {
       if (dir) rmSync(dir, { recursive: true, force: true });
     }
