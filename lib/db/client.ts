@@ -20,18 +20,25 @@ export function openDb(path: string): Db {
   return drizzle(sqlite, { schema });
 }
 
+const globalForDb = globalThis as typeof globalThis & { __hcDb?: Db };
+
+/** Closes `db`; if it is the process singleton, clears it so the next `getDb()` reopens. */
 export function closeDb(db: Db): void {
+  if (globalForDb.__hcDb === db) globalForDb.__hcDb = undefined;
   db.$client.close();
 }
 
 /** Opens the database at `path` and applies pending migrations. */
 export function createDbAt(path: string): Db {
   const db = openDb(path);
-  migrate(db);
+  try {
+    migrate(db);
+  } catch (err) {
+    db.$client.close();
+    throw err;
+  }
   return db;
 }
-
-const globalForDb = globalThis as typeof globalThis & { __hcDb?: Db };
 
 /** Process-wide singleton at `$DATA_DIR/crosscheck.db`. */
 export function getDb(): Db {

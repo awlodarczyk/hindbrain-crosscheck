@@ -83,4 +83,18 @@ describe("migrations", () => {
     closeDb(db);
     delete (globalThis as { __hcDb?: unknown }).__hcDb;
   });
+  it("closeDb on the singleton lets getDb open a fresh handle", () => {
+    const dir = mkdtempSync(join(tmpdir(), "hc-singleton-"));
+    vi.stubEnv("DATA_DIR", dir);
+    vi.stubEnv("APP_SECRET", "x".repeat(32));
+    resetEnvForTests();
+    const first = getDb();
+    closeDb(first);
+    const second = getDb();
+    expect(second).not.toBe(first);
+    expect(second.$client.open).toBe(true);
+    closeDb(second);
+    vi.unstubAllEnvs();
+    rmSync(dir, { recursive: true, force: true });
+  });
 });
