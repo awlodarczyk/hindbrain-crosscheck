@@ -8,7 +8,6 @@ data*
 designs
 docs
 plans
-factcheck-duo
 .superpowers
 tests/*
 !tests/fixtures
