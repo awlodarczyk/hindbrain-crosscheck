@@ -10,3 +10,4 @@ pnpm-lock.yaml
 /plans
 /.superpowers
 next-env.d.ts
+/tests/fixtures/reviews
