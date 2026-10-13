@@ -10,9 +10,15 @@ const NETWORK_ERROR = "Could not sign in. Try again.";
 
 /** Accepts only same-site relative paths; anything else falls back to "/". */
 export function safeNext(next: string | null): string {
-  return next && next.startsWith("/") && !next.startsWith("//") && !next.includes("\\")
-    ? next
-    : "/";
+  if (!next) return "/";
+  try {
+    const u = new URL(next, window.location.origin);
+    return u.origin === window.location.origin && u.pathname.startsWith("/")
+      ? u.pathname + u.search
+      : "/";
+  } catch {
+    return "/";
+  }
 }
 
 export function LoginForm() {

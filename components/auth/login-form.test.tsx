@@ -65,6 +65,10 @@ describe("LoginForm", () => {
     expect(safeNext("//evil.test")).toBe("/");
     expect(safeNext("https://evil.test")).toBe("/");
     expect(safeNext("/\\evil.test")).toBe("/");
+    expect(safeNext("/\t/evil.test")).toBe("/");
+    expect(safeNext("/\n/evil.test")).toBe("/");
+    expect(safeNext("javascript:alert(1)")).toBe("/");
+    expect(safeNext("")).toBe("/");
     expect(safeNext(null)).toBe("/");
   });
 });
