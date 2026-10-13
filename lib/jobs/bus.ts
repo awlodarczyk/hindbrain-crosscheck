@@ -21,7 +21,13 @@ type Options = {
   setTimeoutFn?: typeof setTimeout;
 };
 type Listener = (e: BusEvent) => void;
-type SessionState = { lastId: number; ring: BusEvent[]; active: boolean; forgetting: boolean };
+type SessionState = {
+  lastId: number;
+  ring: BusEvent[];
+  active: boolean;
+  forgetting: boolean;
+  timer?: ReturnType<typeof setTimeout>;
+};
 
 const DEFAULT_RING_SIZE = 200;
 const DEFAULT_RETENTION_MS = 10 * 60 * 1000;
@@ -54,10 +60,18 @@ export function createBus(opts: Options = {}): Bus {
     const state = stateOf(e.sessionId);
     const event: BusEvent = { ...e, id: ++state.lastId };
     state.ring = [...state.ring, event].slice(-ringSize);
-    if (e.type === "run.started") state.active = true;
+    if (e.type === "run.started") {
+      state.active = true;
+      state.forgetting = false;
+      clearTimeout(state.timer);
+    }
     if (e.type === "session.done") {
       state.active = false;
-      schedule(() => forget(e.sessionId), retentionMs).unref?.();
+      clearTimeout(state.timer);
+      state.timer = schedule(() => {
+        if (!state.active) forget(e.sessionId);
+      }, retentionMs);
+      state.timer.unref?.();
     }
     for (const fn of [...(listeners.get(e.sessionId) ?? [])]) {
       try {

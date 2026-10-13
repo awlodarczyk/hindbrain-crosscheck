@@ -4,7 +4,7 @@ import type { ProviderId } from "@/lib/db/enums";
 import { createTestDb } from "@/lib/db/test-db";
 import { listCallsForSession } from "@/lib/repos/calls";
 import { listRuns } from "@/lib/repos/runs";
-import { createSession } from "@/lib/repos/sessions";
+import { createSession, getSession } from "@/lib/repos/sessions";
 import { ensureLocalUser, LOCAL_USER_ID } from "@/lib/repos/users";
 import { createMockProvider, type MockFixtures } from "@/lib/providers/mock";
 import type { Provider } from "@/lib/providers/types";
@@ -112,8 +112,11 @@ describe("runner", () => {
     const [a, b] = [seed(), seed()];
     runner.enqueue(job(a));
     runner.enqueue(job(b));
+    bus.subscribe(b, (e) => events.push(e));
     expect(runner.cancel(b)).toBe(true);
     expect(runner.pending()).toEqual([]);
+    expect(events).toEqual([expect.objectContaining({ type: "session.done", status: "failed" })]);
+    expect(getSession(db, LOCAL_USER_ID, b)?.status).toBe("failed");
     await runner.drain();
     expect(listRuns(db, b)).toHaveLength(0);
   });
@@ -127,6 +130,20 @@ describe("runner", () => {
     runner.enqueue(job(sid));
     await runner.drain();
     expect(listRuns(db, sid).map((r) => r.reason)).toEqual(["initial", "disagreement"]);
+  });
+
+  it("sets failed status even when onError throws", async () => {
+    const runner = make({
+      onError: () => {
+        throw new Error("bad hook");
+      },
+    });
+    const sid = seed();
+    bus.subscribe("missing", (e) => events.push(e));
+    runner.enqueue(job("missing"));
+    runner.enqueue(job(sid));
+    await runner.drain();
+    expect(events.at(-1)).toMatchObject({ type: "session.done", status: "failed" });
   });
 
   it("survives runSession throwing and continues", async () => {

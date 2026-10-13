@@ -53,14 +53,22 @@ export function createRunner(deps: RunnerDeps): Runner {
     waiting.forEach((resolve) => resolve());
   };
 
+  const failSession = (job: Job): void => {
+    try {
+      setSessionStatus(db, job.sessionId, "failed", deps.now);
+    } catch {
+      // the status write is best effort; clients still get session.done
+    }
+    bus.emit({ type: "session.done", sessionId: job.sessionId, status: "failed", disputed: 0 });
+  };
+
   const fail = (job: Job, e: unknown): void => {
     try {
       deps.onError?.(e, job);
-      setSessionStatus(db, job.sessionId, "failed", deps.now);
     } catch {
-      // the failure path itself must never escape the loop
+      // a throwing hook must not skip the status update
     }
-    bus.emit({ type: "session.done", sessionId: job.sessionId, status: "failed", disputed: 0 });
+    failSession(job);
   };
 
   const execute = async (job: Job, signal: AbortSignal): Promise<Job | null> => {
@@ -116,10 +124,12 @@ export function createRunner(deps: RunnerDeps): Runner {
         controller.abort();
         return true;
       }
-      const before = queue.length;
-      queue = queue.filter((j) => j.sessionId !== sessionId);
+      const queued = queue.find((j) => j.sessionId === sessionId);
+      if (!queued) return false;
+      queue = queue.filter((j) => j !== queued);
+      failSession(queued);
       settle();
-      return queue.length < before;
+      return true;
     },
     active: () => [...running.keys()],
     pending: () => queue.map((j) => j.sessionId),

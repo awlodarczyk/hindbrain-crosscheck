@@ -20,7 +20,7 @@ function derivedRunStatus(db: Db, runId: string): RunStatus {
  * the status of their runs and sessions. Returns how many calls and sessions were touched.
  */
 export function sweepInterrupted(db: Db, now: Date): { calls: number; sessions: number } {
-  {
+  return db.transaction(() => {
     const failedCalls = db
       .update(calls)
       .set({
@@ -52,5 +52,5 @@ export function sweepInterrupted(db: Db, now: Date): { calls: number; sessions: 
         .run();
     }
     return { calls: failedCalls.length, sessions: staleSessions.length };
-  }
+  });
 }

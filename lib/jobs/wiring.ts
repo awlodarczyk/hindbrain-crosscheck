@@ -1,6 +1,7 @@
 import { getDb, type Db } from "@/lib/db/client";
 import { PROVIDER_IDS, type ProviderId } from "@/lib/db/enums";
 import { env } from "@/lib/env";
+import { log } from "@/lib/log";
 import { ProviderError } from "@/lib/providers/errors";
 import { createMockProvider } from "@/lib/providers/mock";
 import { createProvider, resolveProviderConfigs } from "@/lib/providers/registry";
@@ -30,6 +31,17 @@ function mockProvider(id: ProviderId): Provider {
   });
 }
 
+/** Decrypts a stored key; null when absent, unreadable, or the mock transport is active. */
+function readSecret(db: Db, key: Buffer, userId: string, provider: ProviderId): string | null {
+  if (env.PROVIDER_TRANSPORT === "mock") return null;
+  try {
+    return getSecret(db, key, userId, provider);
+  } catch {
+    log.warn({ provider, userId }, "stored provider secret is unreadable; continuing without it");
+    return null;
+  }
+}
+
 /** Builds one provider per id from the user's settings, stored secrets and env. */
 export async function providersForUser(
   db: Db,
@@ -38,8 +50,8 @@ export async function providersForUser(
   const settings = getSettings(db, userId);
   const key = deriveKey(env.APP_SECRET, "secrets");
   const secrets = {
-    claude: getSecret(db, key, userId, "claude"),
-    chatgpt: getSecret(db, key, userId, "chatgpt"),
+    claude: readSecret(db, key, userId, "claude"),
+    chatgpt: readSecret(db, key, userId, "chatgpt"),
   };
   const configs = resolveProviderConfigs(settings, secrets, env);
   const entries = PROVIDER_IDS.map((id) => [
@@ -53,7 +65,11 @@ export async function providersForUser(
 export function bootOnce(): void {
   if (g.__hcBooted) return;
   g.__hcBooted = true;
-  sweepInterrupted(getDb(), new Date());
+  try {
+    sweepInterrupted(getDb(), new Date());
+  } catch (e) {
+    log.error({ err: e }, "boot sweep of interrupted calls failed");
+  }
 }
 
 export function getBus(): Bus {

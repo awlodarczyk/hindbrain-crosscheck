@@ -68,6 +68,23 @@ describe("bus", () => {
     expect(bus.isActive("s1")).toBe(false);
   });
 
+  it("keeps ids monotonic and the ring when a session reruns within retention", () => {
+    vi.useFakeTimers();
+    try {
+      const bus = createBus({ retentionMs: 1000 });
+      bus.emit(started());
+      bus.emit(done());
+      vi.advanceTimersByTime(500);
+      bus.emit(started());
+      vi.advanceTimersByTime(600);
+      expect(bus.isActive("s1")).toBe(true);
+      bus.emit(done());
+      expect(bus.replay("s1").map((e) => e.id)).toEqual([1, 2, 3, 4]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("forgets after retention unless subscribers exist", () => {
     vi.useFakeTimers();
     try {
