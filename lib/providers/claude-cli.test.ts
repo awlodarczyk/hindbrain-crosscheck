@@ -1,3 +1,6 @@
+import { existsSync, mkdirSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeSpawn } from "@/tests/helpers/fake-spawn";
@@ -66,6 +69,8 @@ describe("CLAUDE_ARGS", () => {
     const a = CLAUDE_ARGS(req).join(" ");
     expect(a).toContain("--output-format json");
     expect(a).toContain("--model claude-haiku-5-5");
+    expect(a).toContain("--allowedTools WebSearch,WebFetch");
+    expect(a).toContain("--disallowedTools Bash,Edit,Write,MultiEdit,NotebookEdit");
   });
 });
 
@@ -80,7 +85,9 @@ describe("createClaudeCliProvider", () => {
       handler(result("Read https://a.com/x."), "Searching the web…\nSearching the web…\n"),
     );
     const events: unknown[] = [];
-    const p = createClaudeCliProvider({}, { spawn });
+    const dir = join(tmpdir(), `claude-test-${process.pid}-${Date.now()}`);
+    const mkdtemp = () => (mkdirSync(dir), dir);
+    const p = createClaudeCliProvider({}, { spawn, mkdtemp });
     const r = await p.call(
       { ...req, preferredDomains: ["a.com", "b.org"] },
       { signal, onProgress: (e) => events.push(e) },
@@ -89,6 +96,8 @@ describe("createClaudeCliProvider", () => {
     expect(r.citations).toEqual([{ title: "a.com", url: "https://a.com/x" }]);
     expect(r.usage).toEqual({ inputTokens: 3, outputTokens: 4, searches: 2 });
     expect(r.model).toBe("claude-haiku-5-5");
+    expect(spawn.calls.at(-1)?.opts.cwd).toBe(dir);
+    expect(existsSync(dir)).toBe(false);
     expect(spawn.children.at(-1)?.stdinData).toBe("question\n\nPrefer sources from: a.com, b.org.");
     expect(events).toEqual([
       { phase: "searching", searches: 1 },

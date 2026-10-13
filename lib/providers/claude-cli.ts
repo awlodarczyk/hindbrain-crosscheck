@@ -7,6 +7,9 @@
  *   num_turns, duration_ms, session_id, total_cost_usd, usage:{input_tokens, output_tokens, ...},
  *   modelUsage, ... }.
  */
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { z } from "zod";
 import { detectCli } from "./cli-detect";
 import { runCli } from "./cli-runner";
@@ -24,6 +27,8 @@ import type {
 const TEST_MODEL = "claude-haiku-5-5";
 const TEST_TIMEOUT_MS = 60_000;
 const MAX_TURNS = "6";
+const ALLOWED_TOOLS = "WebSearch,WebFetch";
+const DISALLOWED_TOOLS = "Bash,Edit,Write,MultiEdit,NotebookEdit";
 
 const outputSchema = z.object({
   is_error: z.boolean().optional(),
@@ -46,6 +51,10 @@ export const CLAUDE_ARGS = (req: ModelRequest): readonly string[] => [
   req.system,
   "--max-turns",
   MAX_TURNS,
+  "--allowedTools",
+  ALLOWED_TOOLS,
+  "--disallowedTools",
+  DISALLOWED_TOOLS,
 ];
 
 export function parseClaudeCliOutput(stdout: string) {
@@ -85,16 +94,31 @@ const withDomains = (req: ModelRequest) =>
 
 export function createClaudeCliProvider(
   cfg: { cliPath?: string },
-  deps: ProviderDeps = {},
+  deps: ProviderDeps & { mkdtemp?: () => string } = {},
 ): Provider {
-  const run = (req: ModelRequest, signal: AbortSignal, cmd: string, onLine?: (l: string) => void) =>
-    runCli(cmd, CLAUDE_ARGS(req), {
-      input: withDomains(req),
-      timeoutMs: req.timeoutMs,
-      signal,
-      spawn: deps.spawn,
-      onStderrLine: onLine,
-    });
+  const mkdtemp = deps.mkdtemp ?? (() => mkdtempSync(join(tmpdir(), "claude-")));
+
+  const run = async (
+    req: ModelRequest,
+    signal: AbortSignal,
+    cmd: string,
+    onLine?: (l: string) => void,
+  ) => {
+    let dir: string | undefined;
+    try {
+      dir = mkdtemp();
+      return await runCli(cmd, CLAUDE_ARGS(req), {
+        input: withDomains(req),
+        timeoutMs: req.timeoutMs,
+        signal,
+        spawn: deps.spawn,
+        onStderrLine: onLine,
+        cwd: dir,
+      });
+    } finally {
+      if (dir) rmSync(dir, { recursive: true, force: true });
+    }
+  };
 
   return {
     id: "claude",

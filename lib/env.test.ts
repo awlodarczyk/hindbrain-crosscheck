@@ -23,6 +23,7 @@ describe("parseEnv", () => {
       ...base,
       APP_MODE: "hosted",
       TRUST_PROXY: "1",
+      CLI_ENABLED: "0",
       VALKEY_URL: "redis://valkey:6379",
       APP_URL: "https://crosscheck.example.com",
     });
@@ -33,6 +34,7 @@ describe("parseEnv", () => {
       ...base,
       APP_MODE: "hosted",
       TRUST_PROXY: "1",
+      CLI_ENABLED: "0",
       VALKEY_URL: "redis://valkey:6379",
       ADMIN_EMAIL: "a@b.co",
       ADMIN_PASSWORD: "correct-horse-battery",
@@ -44,6 +46,7 @@ describe("parseEnv", () => {
     const full = {
       ...base,
       APP_MODE: "hosted",
+      CLI_ENABLED: "0",
       VALKEY_URL: "redis://valkey:6379",
       ADMIN_EMAIL: "a@b.co",
       ADMIN_PASSWORD: "correct-horse-battery",
@@ -53,6 +56,18 @@ describe("parseEnv", () => {
       'TRUST_PROXY: must be "1" in hosted mode (app runs behind a reverse proxy)',
     );
     expect(parseEnv({ ...full, TRUST_PROXY: "1" }).TRUST_PROXY).toBe("1");
+  });
+  it("requires CLI_ENABLED=0 in hosted mode", () => {
+    const full = {
+      ...base,
+      APP_MODE: "hosted",
+      TRUST_PROXY: "1",
+      VALKEY_URL: "redis://valkey:6379",
+      APP_URL: "https://crosscheck.example.com",
+    };
+    expect(() => parseEnv(full)).toThrow('CLI_ENABLED: must be "0" in hosted mode');
+    expect(() => parseEnv({ ...full, CLI_ENABLED: "1" })).toThrow(/CLI_ENABLED: must be "0"/);
+    expect(parseEnv({ ...full, CLI_ENABLED: "0" }).CLI_ENABLED).toBe("0");
   });
   it("lists every invalid key at once", () => {
     expect(() => parseEnv({ APP_SECRET: "short", PORT: "abc" })).toThrow(
@@ -86,6 +101,7 @@ describe("parseEnv", () => {
       ...base,
       APP_MODE: "hosted",
       TRUST_PROXY: "1",
+      CLI_ENABLED: "0",
       VALKEY_URL: "redis://valkey:6379",
       ADMIN_EMAIL: "a@b.co",
       ADMIN_PASSWORD: "correct-horse-battery",

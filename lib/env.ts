@@ -3,6 +3,7 @@ import { z } from "zod";
 
 const HOSTED_REQUIRED = ["VALKEY_URL", "APP_URL"] as const;
 const TRUST_PROXY_MESSAGE = 'must be "1" in hosted mode (app runs behind a reverse proxy)';
+const CLI_MESSAGE = 'must be "0" in hosted mode';
 const HOSTED_MESSAGE = "required when APP_MODE=hosted";
 const TEST_APP_SECRET = "test-secret-32-bytes-minimum-length!!";
 
@@ -37,6 +38,9 @@ export const EnvSchema = BaseEnvSchema.superRefine((e, ctx) => {
       message: TRUST_PROXY_MESSAGE,
     });
   }
+  if (e.APP_MODE === "hosted" && e.CLI_ENABLED !== "0") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["CLI_ENABLED"], message: CLI_MESSAGE });
+  }
 });
 
 export type Env = z.infer<typeof BaseEnvSchema>;
@@ -70,8 +74,13 @@ export function parseEnv(raw: Readonly<Record<string, string | undefined>>): Env
     normalized.APP_MODE === "hosted" && normalized.TRUST_PROXY !== "1"
       ? [`TRUST_PROXY: ${TRUST_PROXY_MESSAGE}`]
       : [];
+  const cli =
+    normalized.APP_MODE === "hosted" && normalized.CLI_ENABLED !== "0"
+      ? [`CLI_ENABLED: ${CLI_MESSAGE}`]
+      : [];
   const all = [
     ...issues,
+    ...(issues.some((i) => i.startsWith("CLI_ENABLED:")) ? [] : cli),
     ...(issues.some((i) => i.startsWith("TRUST_PROXY:")) ? [] : proxy),
     ...hosted.filter((h) => !issues.some((i) => i.startsWith(h.split(":")[0] + ":"))),
   ];

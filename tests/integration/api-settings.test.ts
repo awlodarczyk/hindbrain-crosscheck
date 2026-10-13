@@ -176,6 +176,7 @@ describe("hosted mode reveal", () => {
     "APP_MODE",
     "APP_URL",
     "TRUST_PROXY",
+    "CLI_ENABLED",
     "VALKEY_URL",
     "ADMIN_EMAIL",
     "ADMIN_PASSWORD",
@@ -186,6 +187,7 @@ describe("hosted mode reveal", () => {
     process.env.APP_URL = "https://app.example.com";
     process.env.VALKEY_URL = "memory://local";
     process.env.TRUST_PROXY = "1";
+    process.env.CLI_ENABLED = "0";
     process.env.ADMIN_EMAIL = "admin@example.com";
     process.env.ADMIN_PASSWORD = "correct horse battery staple";
     resetEnvForTests();
