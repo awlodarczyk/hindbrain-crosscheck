@@ -13,3 +13,4 @@ designs/**/*.log
 tsconfig.tsbuildinfo
 next-env.d.ts
 node-compile-cache/
+tests/visual/actual/
