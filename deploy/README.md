@@ -11,6 +11,11 @@ Neither publishes a host port; Dokploy's Traefik routes by domain.
 4. Domains tab: host `crosscheck.example.com`, service `app`, port `3000`, HTTPS with Let's Encrypt.
 5. Deploy. Use separate Dokploy projects (and separate volumes) for staging and production.
 
+The `app` service joins the external `dokploy-network` (plus the default network it shares
+with `valkey`) because Dokploy's Traefik reaches Compose services only on that network.
+The network exists on every Dokploy host; for a plain `docker compose` run, create it first
+with `docker network create dokploy-network`.
+
 ## Environment contract
 
 | Name                                             | Required   | Mode   | Purpose                                                 |

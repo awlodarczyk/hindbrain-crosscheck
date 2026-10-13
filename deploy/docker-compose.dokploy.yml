@@ -30,6 +30,9 @@ services:
         condition: service_healthy
     expose:
       - "3000"
+    networks:
+      - default
+      - dokploy-network
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
       interval: 30s
@@ -58,3 +61,6 @@ services:
       VALKEY_PASSWORD: ${VALKEY_PASSWORD:?set VALKEY_PASSWORD}
 volumes:
   crosscheck-data: {}
+networks:
+  dokploy-network:
+    external: true
