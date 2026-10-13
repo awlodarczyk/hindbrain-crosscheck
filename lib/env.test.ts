@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { parseEnv } from "./env";
+import { parseEnv, type EnvError } from "./env";
 const base = { APP_SECRET: "test-secret-32-bytes-minimum-length!!" };
 
 describe("parseEnv", () => {
@@ -58,6 +58,29 @@ describe("parseEnv", () => {
       /APP_SECRET[\s\S]*VALKEY_URL[\s\S]*ADMIN_EMAIL[\s\S]*ADMIN_PASSWORD[\s\S]*APP_URL/,
     );
   });
+  it("reports an invalid hosted APP_URL exactly once", () => {
+    const full = {
+      ...base,
+      APP_MODE: "hosted",
+      VALKEY_URL: "redis://valkey:6379",
+      ADMIN_EMAIL: "a@b.co",
+      ADMIN_PASSWORD: "correct-horse-battery",
+      APP_URL: "not-a-url",
+    };
+    try {
+      parseEnv(full);
+      expect.unreachable();
+    } catch (e) {
+      expect((e as EnvError).issues.filter((l) => l.startsWith("APP_URL"))).toHaveLength(1);
+    }
+  });
+  it("does not mention hosted keys in local mode", () => {
+    expect(() => parseEnv({ APP_SECRET: "short" })).toThrow(
+      expect.objectContaining({
+        message: expect.not.stringMatching(/VALKEY_URL|ADMIN_EMAIL|ADMIN_PASSWORD|APP_URL/),
+      }),
+    );
+  });
 });
 
 describe("env singleton", () => {
@@ -65,6 +88,7 @@ describe("env singleton", () => {
   afterEach(() => {
     if (saved === undefined) delete process.env.APP_SECRET;
     else process.env.APP_SECRET = saved;
+    vi.unstubAllEnvs();
     vi.resetModules();
   });
 
@@ -74,7 +98,6 @@ describe("env singleton", () => {
     vi.resetModules();
     const mod = await import("./env");
     expect(() => mod.env.APP_MODE).toThrow(mod.EnvError);
-    vi.unstubAllEnvs();
   });
 
   it("falls back to the test secret under vitest", async () => {

@@ -82,7 +82,7 @@ export function resetEnvForTests(): void {
   memo = undefined;
 }
 
-/** Lazily parsed view of process.env; throws EnvError on first access if invalid. */
+/** Lazily parsed, read-only view of process.env (writes are ignored; use resetEnvForTests in tests); throws EnvError on first access if invalid. */
 export const env: Env = new Proxy({} as Env, {
   get: (_, key) => getEnv()[key as keyof Env],
   has: (_, key) => key in getEnv(),
