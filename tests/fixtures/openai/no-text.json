@@ -1,0 +1,6 @@
+{
+  "id": "resp_002",
+  "model": "gpt-5.5",
+  "output": [{ "id": "msg_2", "type": "message", "role": "assistant", "content": [] }],
+  "usage": { "input_tokens": 100, "output_tokens": 0 }
+}

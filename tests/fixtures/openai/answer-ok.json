@@ -1,0 +1,43 @@
+{
+  "id": "resp_001",
+  "model": "gpt-5.5",
+  "output_text": "Water boils at about 100 C at sea level and lower at altitude.",
+  "output": [
+    { "id": "ws_1", "type": "web_search_call", "status": "completed" },
+    {
+      "id": "msg_1",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "Water boils at about 100 C at sea level and lower at altitude.",
+          "annotations": [
+            {
+              "type": "url_citation",
+              "url": "https://example.org/boiling",
+              "title": "Boiling point",
+              "start_index": 0,
+              "end_index": 30
+            },
+            {
+              "type": "url_citation",
+              "url": "https://example.org/altitude",
+              "title": "Altitude effects",
+              "start_index": 31,
+              "end_index": 62
+            },
+            {
+              "type": "url_citation",
+              "url": "https://example.org/boiling",
+              "title": "Boiling point",
+              "start_index": 0,
+              "end_index": 62
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "usage": { "input_tokens": 1800, "output_tokens": 520 }
+}
