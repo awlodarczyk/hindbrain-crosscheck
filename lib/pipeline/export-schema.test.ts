@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { EMPTY_STATS } from "../repos/types";
 import { makeBundle, SESSION_BUNDLE } from "../../tests/fixtures/session-bundle";
 import { ExportError, ExportFileSchema, fromExport, toExport } from "./export-schema";
 
@@ -78,5 +79,32 @@ describe("fromExport", () => {
     const { bundles, warnings } = fromExport(toExport([b], now));
     expect(bundles[0]?.calls[0]).toMatchObject({ status: "failed", errorCode: "interrupted" });
     expect(warnings.length).toBe(1);
+  });
+});
+
+describe("fromExport coercion and stats", () => {
+  it("zeroes stats when absent", () => {
+    const f = toExport([SESSION_BUNDLE], now);
+    const rest = Object.fromEntries(Object.entries(f.sessions[0]!).filter(([k]) => k !== "stats"));
+    const out = fromExport({ ...f, sessions: [rest] }).bundles[0]!;
+    expect(out.session.stats).toEqual({ ...EMPTY_STATS });
+  });
+
+  it("derives run and session status after coercion", () => {
+    const b = makeBundle({
+      session: { ...SESSION_BUNDLE.session, status: "running" },
+      runs: [{ ...SESSION_BUNDLE.runs[0]!, status: "running", finishedAt: null }],
+      calls: SESSION_BUNDLE.calls.map((c, i) =>
+        i === 0 ? { ...c, status: "running" as const } : c,
+      ),
+    });
+    const out = fromExport(toExport([b], now)).bundles[0]!;
+    expect(out.runs[0]?.status).toBe("partial");
+    expect(out.session.status).toBe("partial");
+  });
+
+  it("rejects non-ISO dates", () => {
+    const f = toExport([SESSION_BUNDLE], now);
+    expect(() => fromExport({ ...f, exportedAt: "yesterday" })).toThrow(ExportError);
   });
 });

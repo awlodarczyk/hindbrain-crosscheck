@@ -1,10 +1,11 @@
 import { z } from "zod";
 import type { Call, Claim, Run, Session } from "@/lib/repos/types";
+import { deriveSessionStatus } from "@/lib/repos/stats";
 import type { SessionBundle } from "./report";
 
 export const EXPORT_VERSION = 1 as const;
 const MAX_SESSIONS = 500;
-const iso = z.string();
+const iso = z.string().datetime({ offset: true });
 
 export const CitationExport = z.object({ title: z.string(), url: z.string().url() });
 export const ClaimExport = z.object({
@@ -44,13 +45,28 @@ export const RunExport = z.object({
   startedAt: iso,
   finishedAt: iso.nullable(),
 });
+const count = z.number().default(0);
+export const StatsExport = z
+  .object({
+    claims: count,
+    supported: count,
+    disputed: count,
+    partial: count,
+    unverifiable: count,
+    calls: count,
+    callsDone: count,
+    searches: count,
+    durationMs: count,
+    costUsd: z.number().nullable().default(null),
+  })
+  .default({});
 export const SessionExport = z.object({
   question: z.string().min(1).max(8000),
   title: z.string().nullable(),
   mode: z.enum(["ask", "paste"]),
   status: z.enum(["queued", "running", "done", "partial", "failed"]),
   settingsSnapshot: z.unknown(),
-  stats: z.unknown(),
+  stats: StatsExport,
   createdAt: iso,
   updatedAt: iso,
   runs: z.array(RunExport),
@@ -152,12 +168,40 @@ export function toExport(bundles: readonly SessionBundle[], now: Date): ExportFi
 
 function importCall(c: CallExportT, warnings: string[]): ImportBundle["calls"][number] {
   const { ref, claims, ...rest } = c;
-  const stale = c.status === "running" || c.status === "queued";
+  const stale = isStale(c.status);
   if (stale) warnings.push(`call_interrupted:${ref}`);
   return {
     ...rest,
     ...(stale ? { status: "failed" as const, errorCode: "interrupted" } : {}),
     claims,
+  };
+}
+
+const isStale = (status: string) => status === "running" || status === "queued";
+const asCall = (c: ImportBundle["calls"][number]): Call => ({
+  ...c,
+  id: "",
+  runId: "",
+  html: null,
+});
+
+function importSession(s: ExportFile["sessions"][number], warnings: string[]): ImportBundle {
+  const { runs, calls, ...session } = s;
+  const imported = calls.map((c) => importCall(c, warnings));
+  const touched = new Set(calls.filter((c) => isStale(c.status)).map((c) => c.attempt));
+  const outcome = (attempt: number) =>
+    deriveSessionStatus(imported.filter((c) => c.attempt === attempt).map(asCall));
+  const fixedRuns = runs.map((r) => {
+    if (!touched.has(r.attempt) || !isStale(r.status)) return r;
+    const derived = outcome(r.attempt);
+    return { ...r, status: derived === "failed" || derived === "partial" ? derived : r.status };
+  });
+  const latest = Math.max(0, ...runs.map((r) => r.attempt));
+  const fixedStatus = touched.has(latest) ? outcome(latest) : session.status;
+  return {
+    session: { ...session, settingsSnapshot: session.settingsSnapshot, status: fixedStatus },
+    runs: fixedRuns,
+    calls: imported,
   };
 }
 
@@ -183,14 +227,6 @@ export function fromExport(json: unknown): {
     const issues = parsed.error.issues.slice(0, 5).map((i) => `${i.path.join(".")}: ${i.message}`);
     throw new ExportError(issues.join("; "));
   }
-  const bundles = parsed.data.sessions.map(({ runs, calls, ...session }) => ({
-    session: {
-      ...session,
-      settingsSnapshot: session.settingsSnapshot,
-      stats: session.stats as Session["stats"],
-    },
-    runs,
-    calls: calls.map((c) => importCall(c, warnings)),
-  }));
+  const bundles = parsed.data.sessions.map((s) => importSession(s, warnings));
   return { bundles, warnings };
 }

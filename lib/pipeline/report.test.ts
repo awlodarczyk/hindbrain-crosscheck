@@ -3,6 +3,7 @@ import { makeBundle, SESSION_BUNDLE } from "../../tests/fixtures/session-bundle"
 import { buildMarkdownReport, escapeMdCell, latestRunView } from "./report";
 
 const now = new Date("2026-10-13T10:00:00.000Z");
+import { EMPTY_STATS } from "../repos/types";
 const withCall = (id: string, patch: object) =>
   makeBundle({ calls: SESSION_BUNDLE.calls.map((c) => (c.id === id ? { ...c, ...patch } : c)) });
 
@@ -53,5 +54,36 @@ describe("latestRunView", () => {
     expect(v.run?.attempt).toBe(2);
     expect(v.answers.claude?.text).toBe("second");
     expect(v.answers.chatgpt).toBeNull();
+  });
+});
+
+describe("report robustness", () => {
+  it("escapes source cells", () => {
+    const b = makeBundle({
+      claims: SESSION_BUNDLE.claims.map((c, i) =>
+        i === 2 ? { ...c, sourceTitle: "A | B\nC", sourceUrl: "https://example.org/x" } : c,
+      ),
+    });
+    expect(buildMarkdownReport(b, { now })).toContain("[A \\| B C](https://example.org/x)");
+  });
+
+  it("tolerates empty stats", () => {
+    const b = makeBundle({ session: { ...SESSION_BUNDLE.session, stats: EMPTY_STATS } });
+    expect(() => buildMarkdownReport(b, { now })).not.toThrow();
+    const missing = makeBundle({
+      session: { ...SESSION_BUNDLE.session, stats: undefined as never },
+    });
+    expect(() => buildMarkdownReport(missing, { now })).not.toThrow();
+  });
+
+  it("renders Not available for a missing answer", () => {
+    const b = makeBundle({ calls: SESSION_BUNDLE.calls.filter((c) => c.id !== "c1") });
+    expect(buildMarkdownReport(b, { now })).toContain("## Claude answer\n\n_Not available_");
+  });
+
+  it("puts generated time in footer", () => {
+    expect(buildMarkdownReport(SESSION_BUNDLE, { now })).toContain(
+      "_Generated 2026-10-13T10:00:00.000Z by",
+    );
   });
 });
