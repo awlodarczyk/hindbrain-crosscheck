@@ -28,7 +28,9 @@ export const THINKING_BUDGET: Record<ReasoningEffort, number> = {
 };
 
 const MAX_TOKENS = 8000;
+const THINKING_OUTPUT_HEADROOM = 4000;
 const MAX_ROUNDS = 4;
+const TEST_TIMEOUT_MS = 15_000;
 const TEST_MODEL = "claude-haiku-5-5";
 const TRUNCATED_NOTE = "\n\n[Answer truncated at the length limit.]";
 
@@ -48,12 +50,13 @@ export function buildAnthropicBody(
   messages: readonly AnthropicMessage[],
 ): AnthropicRequestBody {
   const thinking = THINKING_MODELS.includes(req.model);
+  const budget = THINKING_BUDGET[req.reasoningEffort];
   return {
     model: req.model,
-    max_tokens: MAX_TOKENS,
+    max_tokens: thinking ? Math.max(MAX_TOKENS, budget + THINKING_OUTPUT_HEADROOM) : MAX_TOKENS,
     system: req.system,
     ...(thinking
-      ? { thinking: { type: "enabled", budget_tokens: THINKING_BUDGET[req.reasoningEffort] } }
+      ? { thinking: { type: "enabled", budget_tokens: budget } }
       : { temperature: req.temperature }),
     messages,
     tools: [
@@ -96,28 +99,48 @@ const sumOrNull = (values: readonly (number | undefined)[]) => {
   return present.length ? present.reduce((a, b) => a + b, 0) : null;
 };
 
-async function readError(res: Response): Promise<ProviderError> {
-  const parsed = anthropicErrorSchema.safeParse(await res.json().catch(() => null));
-  const message = (parsed.success && parsed.data.error?.message) || `HTTP ${res.status}`;
-  if (res.status === 401 || res.status === 403) {
-    return new ProviderError("no_credentials", `Anthropic API: ${message}`, { status: res.status });
-  }
-  return new ProviderError("provider_http", `Anthropic API: ${message}`, { status: res.status });
-}
-
-function mapFetchError(e: unknown, timeoutMs: number): ProviderError {
-  if (e instanceof ProviderError) return e;
+/** Maps timeout/abort failures to their codes; returns null for anything else. */
+function classifyInterruption(
+  e: unknown,
+  signal: AbortSignal,
+  totalMs: number,
+): ProviderError | null {
+  if (signal.aborted)
+    return new ProviderError("aborted", "Anthropic API call aborted.", { cause: e });
   const name = e instanceof Error ? e.name : "";
   if (name === "TimeoutError") {
     return new ProviderError(
       "timeout",
-      `Anthropic API timed out after ${Math.round(timeoutMs / 1000)} s.`,
+      `Anthropic API timed out after ${Math.round(totalMs / 1000)} s.`,
       { cause: e },
     );
   }
   if (name === "AbortError")
     return new ProviderError("aborted", "Anthropic API call aborted.", { cause: e });
-  return new ProviderError("network", "Could not reach the Anthropic API.", { cause: e });
+  return null;
+}
+
+async function readJson(res: Response, signal: AbortSignal, totalMs: number): Promise<unknown> {
+  try {
+    return await res.json();
+  } catch (cause) {
+    throw classifyInterruption(cause, signal, totalMs) ?? cause;
+  }
+}
+
+async function readError(
+  res: Response,
+  signal: AbortSignal,
+  totalMs: number,
+): Promise<ProviderError> {
+  const raw = await readJson(res, signal, totalMs).catch((e: unknown) => {
+    if (e instanceof ProviderError) throw e;
+    return null;
+  });
+  const parsed = anthropicErrorSchema.safeParse(raw);
+  const message = (parsed.success && parsed.data.error?.message) || `HTTP ${res.status}`;
+  const code = res.status === 401 || res.status === 403 ? "no_credentials" : "provider_http";
+  return new ProviderError(code, `Anthropic API: ${message}`, { status: res.status });
 }
 
 export function createAnthropicProvider(
@@ -126,9 +149,16 @@ export function createAnthropicProvider(
 ): Provider {
   const doFetch = deps.fetch ?? fetch;
 
-  async function post(body: AnthropicRequestBody, signal: AbortSignal, timeoutMs: number) {
+  async function post(
+    body: AnthropicRequestBody,
+    signal: AbortSignal,
+    deadline: number,
+    totalMs: number,
+  ) {
     if (!cfg.apiKey)
       throw new ProviderError("no_credentials", "Anthropic API key is not configured.");
+    // One deadline spans all rounds; each round gets only the time left (min 1 ms).
+    const remaining = Math.max(1, deadline - Date.now());
     let res: Response;
     try {
       res = await doFetch(ANTHROPIC_URL, {
@@ -139,15 +169,19 @@ export function createAnthropicProvider(
           "anthropic-version": ANTHROPIC_VERSION,
         },
         body: JSON.stringify(body),
-        signal: AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]),
+        signal: AbortSignal.any([signal, AbortSignal.timeout(remaining)]),
       });
     } catch (e) {
-      throw mapFetchError(e, timeoutMs);
+      throw (
+        classifyInterruption(e, signal, totalMs) ??
+        new ProviderError("network", "Could not reach the Anthropic API.", { cause: e })
+      );
     }
-    if (!res.ok) throw await readError(res);
+    if (!res.ok) throw await readError(res, signal, totalMs);
     try {
-      return anthropicResponseSchema.parse(await res.json());
+      return anthropicResponseSchema.parse(await readJson(res, signal, totalMs));
     } catch (cause) {
+      if (cause instanceof ProviderError) throw cause;
       throw new ProviderError(
         "provider_bad_response",
         "Anthropic returned an unexpected response.",
@@ -163,22 +197,27 @@ export function createAnthropicProvider(
       if (!cfg.apiKey)
         throw new ProviderError("no_credentials", "Anthropic API key is not configured.");
       const started = performance.now();
-      const messages: AnthropicMessage[] = [{ role: "user", content: req.user }];
-      const content: AnthropicBlock[] = [];
+      const deadline = Date.now() + req.timeoutMs;
+      let messages: readonly AnthropicMessage[] = [{ role: "user", content: req.user }];
+      let content: readonly AnthropicBlock[] = [];
       const rounds: AnthropicResponse[] = [];
       let seen = 0;
       for (let i = 0; i < MAX_ROUNDS; i++) {
-        const data = await post(buildAnthropicBody(req, messages), signal, req.timeoutMs);
+        const data = await post(buildAnthropicBody(req, messages), signal, deadline, req.timeoutMs);
         rounds.push(data);
-        content.push(...data.content);
+        content = [...content, ...data.content];
         const searches = countSearches(content);
         if (searches > seen) onProgress?.({ phase: "searching", searches });
         seen = searches;
         if (data.stop_reason !== "pause_turn") break;
-        messages.splice(1, messages.length, { role: "assistant", content: [...content] });
+        messages = [messages[0] as AnthropicMessage, { role: "assistant", content }];
       }
       const last = rounds[rounds.length - 1];
-      const parsed = parseAnthropicContent(content, last?.stop_reason ?? null);
+      const stillPaused = last?.stop_reason === "pause_turn";
+      const parsed = parseAnthropicContent(
+        content,
+        stillPaused ? "max_tokens" : (last?.stop_reason ?? null),
+      );
       onProgress?.({ phase: "writing", searches: parsed.searches });
       return {
         text: parsed.text,
@@ -199,7 +238,8 @@ export function createAnthropicProvider(
         await post(
           { model: TEST_MODEL, max_tokens: 1, messages: [{ role: "user", content: "ping" }] },
           signal,
-          15_000,
+          Date.now() + TEST_TIMEOUT_MS,
+          TEST_TIMEOUT_MS,
         );
         return { ok: true, transport, detail: "Connected" };
       } catch (e) {

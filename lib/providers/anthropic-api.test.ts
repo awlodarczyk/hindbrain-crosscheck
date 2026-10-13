@@ -164,4 +164,54 @@ describe("anthropic provider", () => {
     ).test(signal);
     expect(bad.ok).toBe(false);
   });
+
+  it("keeps thinking budget below max_tokens for every effort", async () => {
+    for (const reasoningEffort of ["low", "medium", "high", "max"] as const) {
+      const f = fakeFetch(json(answerOk));
+      await run(f, { ...req, model: "claude-opus-5-5", reasoningEffort });
+      const body = bodyOf(f, 0);
+      expect(body.thinking.budget_tokens).toBeLessThan(body.max_tokens);
+    }
+    const f = fakeFetch(json(answerOk));
+    await run(f);
+    expect(bodyOf(f, 0).max_tokens).toBe(8000);
+  });
+
+  it("maps a timeout during body read to timeout", async () => {
+    const res = {
+      ok: true,
+      status: 200,
+      json: () => Promise.reject(new DOMException("x", "TimeoutError")),
+    };
+    const f = vi.fn<typeof fetch>().mockResolvedValue(res as unknown as Response);
+    await expect(run(f)).rejects.toMatchObject({ code: "timeout" });
+  });
+
+  it("maps a custom abort reason to aborted", async () => {
+    const ctrl = new AbortController();
+    ctrl.abort(new Error("custom"));
+    const f = vi.fn<typeof fetch>().mockRejectedValue(new Error("custom"));
+    const p = createAnthropicProvider({ apiKey: "k" }, { fetch: f });
+    await expect(p.call(req, { signal: ctrl.signal })).rejects.toMatchObject({ code: "aborted" });
+  });
+
+  it("flags truncation after four consecutive pause_turn rounds", async () => {
+    const f = fakeFetch(json(pause1), json(pause2), json(pause1), json(pause2));
+    const res = await run(f);
+    expect(f).toHaveBeenCalledTimes(4);
+    expect(res.text).toContain("[Answer truncated at the length limit.]");
+  });
+
+  it("shares one deadline across rounds", async () => {
+    let clock = 0;
+    vi.spyOn(Date, "now").mockImplementation(() => clock);
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    const f = vi.fn<typeof fetch>(() => {
+      clock += 600;
+      return Promise.resolve(json(pause1));
+    });
+    await run(f, { ...req, timeoutMs: 1000 });
+    expect(timeout.mock.calls.map((c) => c[0])).toEqual([1000, 400, 1, 1]);
+    vi.restoreAllMocks();
+  });
 });
