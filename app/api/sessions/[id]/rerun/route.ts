@@ -19,7 +19,10 @@ export const POST = defineRoute({ op: "rerun" }, ({ ctx, params }) => {
     try {
       pastedFromLatestRun(db, id);
     } catch {
-      throw errors.conflict("not_rerunnable", "This paste session has no pasted answers to re-run.");
+      throw errors.conflict(
+        "not_rerunnable",
+        "This paste session has no pasted answers to re-run.",
+      );
     }
   }
   if (!runner.enqueue({ sessionId: id, userId: ctx.userId, reason: "manual" }).queued) {

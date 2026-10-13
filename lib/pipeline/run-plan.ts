@@ -21,7 +21,10 @@ export function loadSession(db: Db, id: string): SessionRow {
 }
 
 /** Pasted answers of the session's latest run, by provider. @throws when there are none. */
-export function pastedFromLatestRun(db: Db, sessionId: string): Partial<Record<ProviderId, string>> {
+export function pastedFromLatestRun(
+  db: Db,
+  sessionId: string,
+): Partial<Record<ProviderId, string>> {
   const prev = latestRun(db, sessionId);
   const pasted: Partial<Record<ProviderId, string>> = {};
   for (const c of prev ? listCalls(db, prev.id) : []) {
