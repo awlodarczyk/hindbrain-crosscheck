@@ -69,7 +69,9 @@ export function createValkeyLimiter(client: RedisLike, opts: Opts = {}): RateLim
   };
 }
 
-/** ioredis client that fails fast instead of queueing commands while disconnected. */
+const CONNECT_WAIT_MS = 2000;
+
+/** ioredis client that waits briefly for the initial connection, then fails fast instead of queueing commands while disconnected. */
 export function createValkeyClient(url: string): RedisLike {
   const redis = new Redis(url, {
     lazyConnect: false,
@@ -78,10 +80,20 @@ export function createValkeyClient(url: string): RedisLike {
     connectTimeout: 2000,
   });
   redis.on("error", (err: Error) => log.warn({ message: err.message }, "valkey connection error"));
+  const ready = async () => {
+    if (redis.status !== "connecting" && redis.status !== "wait") return;
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("valkey connect timeout")), CONNECT_WAIT_MS);
+      redis.once("ready", () => {
+        clearTimeout(timer);
+        resolve();
+      });
+    });
+  };
   return {
-    evalsha: (sha, n, ...args) => redis.evalsha(sha, n, ...args),
-    eval: (script, n, ...args) => redis.eval(script, n, ...args),
-    script: async (cmd, script) => String(await redis.script(cmd, script)),
+    evalsha: async (sha, n, ...args) => (await ready(), redis.evalsha(sha, n, ...args)),
+    eval: async (script, n, ...args) => (await ready(), redis.eval(script, n, ...args)),
+    script: async (cmd, script) => (await ready(), String(await redis.script(cmd, script))),
     get status() {
       return redis.status;
     },

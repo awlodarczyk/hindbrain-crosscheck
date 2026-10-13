@@ -1,0 +1,60 @@
+# Dokploy Compose service (Git provider, compose path deploy/docker-compose.dokploy.yml).
+# Dokploy injects environment variables from its Environment tab; no env_file is used.
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: hindbrain-crosscheck:latest
+    restart: unless-stopped
+    environment:
+      APP_MODE: hosted
+      TRUST_PROXY: "1"
+      CLI_ENABLED: "0"
+      DATA_DIR: /data
+      VALKEY_URL: redis://:${VALKEY_PASSWORD:?set VALKEY_PASSWORD}@valkey:6379/0
+      # From the Dokploy environment: APP_SECRET, APP_URL, ADMIN_EMAIL, ADMIN_PASSWORD,
+      # ANTHROPIC_API_KEY, OPENAI_API_KEY, LOG_LEVEL, PROVIDER_TRANSPORT.
+      APP_SECRET: ${APP_SECRET:?set APP_SECRET}
+      APP_URL: ${APP_URL:?set APP_URL}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?set ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      PROVIDER_TRANSPORT: ${PROVIDER_TRANSPORT:-auto}
+    volumes:
+      - crosscheck-data:/data
+    depends_on:
+      valkey:
+        condition: service_healthy
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+  valkey:
+    image: valkey/valkey:8-alpine
+    command:
+      - valkey-server
+      - --requirepass
+      - ${VALKEY_PASSWORD:?set VALKEY_PASSWORD}
+      - --maxmemory
+      - 64mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --save
+      - ""
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", 'valkey-cli -a "$$VALKEY_PASSWORD" --no-auth-warning ping | grep -q PONG']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    environment:
+      VALKEY_PASSWORD: ${VALKEY_PASSWORD:?set VALKEY_PASSWORD}
+volumes:
+  crosscheck-data: {}

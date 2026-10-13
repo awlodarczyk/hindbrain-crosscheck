@@ -21,6 +21,10 @@ describe("container build files", () => {
     expect(dockerfile).not.toMatch(/^\s*ARG\s+\w*(KEY|SECRET)/im);
   });
 
+  it("contains no APP_SECRET assignment (build needs no env)", () => {
+    expect(dockerfile).not.toContain("APP_SECRET=");
+  });
+
   it(".dockerignore excludes env files, node_modules and data", () => {
     const lines = read(".dockerignore")
       .split("\n")

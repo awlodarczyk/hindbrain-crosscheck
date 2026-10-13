@@ -46,6 +46,20 @@ export function createLogger(level: string, stream?: DestinationStream): Logger 
   );
 }
 
-export const log: Logger = createLogger(isTestRuntime() ? "silent" : env.LOG_LEVEL);
+let instance: Logger | undefined;
+const getLog = (): Logger =>
+  (instance ??= createLogger(isTestRuntime() ? "silent" : env.LOG_LEVEL));
+
+/** Process logger; the underlying pino instance is created on first use. */
+export const log: Logger = new Proxy({} as Logger, {
+  get: (_, key) => Reflect.get(getLog(), key),
+  set: (_, key, value) => Reflect.set(getLog(), key, value),
+  has: (_, key) => Reflect.has(getLog(), key),
+  defineProperty: (_, key, desc) => Reflect.defineProperty(getLog(), key, desc),
+  getOwnPropertyDescriptor: (_, key) => {
+    const desc = Reflect.getOwnPropertyDescriptor(getLog(), key);
+    return desc && { ...desc, configurable: true };
+  },
+});
 
 export const childLogger = (bindings: Record<string, unknown>): Logger => log.child(bindings);

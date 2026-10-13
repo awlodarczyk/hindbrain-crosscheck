@@ -13,8 +13,7 @@ RUN pnpm install --frozen-lockfile
 FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Build-time placeholder only (some route modules read env while Next collects page data); not used at runtime.
-RUN mkdir -p public && APP_SECRET=build-time-placeholder-not-a-real-secret pnpm build
+RUN mkdir -p public && pnpm build
 
 FROM node:22-alpine AS runner
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0 DATA_DIR=/data

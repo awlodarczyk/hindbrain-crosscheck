@@ -1,0 +1,5 @@
+# Local smoke only: publishes the app on 127.0.0.1:3100. Never deploy this override.
+services:
+  app:
+    ports:
+      - "127.0.0.1:3100:3000"
