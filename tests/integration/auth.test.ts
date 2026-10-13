@@ -20,6 +20,7 @@ function useMode(mode: "hosted" | "local") {
   process.env.APP_MODE = mode;
   process.env.APP_URL = "http://localhost:4173";
   process.env.VALKEY_URL = "memory://local";
+  process.env.TRUST_PROXY = "1";
   process.env.ADMIN_EMAIL = "admin@example.test";
   process.env.ADMIN_PASSWORD = PASSWORD;
   resetEnvForTests();

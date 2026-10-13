@@ -172,12 +172,20 @@ describe("provider test failure", () => {
 });
 
 describe("hosted mode reveal", () => {
-  const keys = ["APP_MODE", "APP_URL", "VALKEY_URL", "ADMIN_EMAIL", "ADMIN_PASSWORD"] as const;
+  const keys = [
+    "APP_MODE",
+    "APP_URL",
+    "TRUST_PROXY",
+    "VALKEY_URL",
+    "ADMIN_EMAIL",
+    "ADMIN_PASSWORD",
+  ] as const;
   const saved = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
   beforeEach(() => {
     process.env.APP_MODE = "hosted";
     process.env.APP_URL = "https://app.example.com";
     process.env.VALKEY_URL = "memory://local";
+    process.env.TRUST_PROXY = "1";
     process.env.ADMIN_EMAIL = "admin@example.com";
     process.env.ADMIN_PASSWORD = "correct horse battery staple";
     resetEnvForTests();

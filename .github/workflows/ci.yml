@@ -13,6 +13,11 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    services:
+      valkey:
+        image: valkey/valkey:8-alpine
+        ports:
+          - 6379:6379
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,6 +47,7 @@ jobs:
         env:
           APP_SECRET: "test-secret-32-bytes-minimum-length!!"
           PROVIDER_TRANSPORT: mock
+          VALKEY_TEST_URL: redis://localhost:6379/1
 
       - name: Install Playwright browser
         run: pnpm exec playwright install --with-deps chromium

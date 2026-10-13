@@ -8,28 +8,36 @@ import { getBus, getRunner } from "@/lib/jobs/wiring";
 import type { Runner } from "@/lib/jobs/runner";
 import { isHosted } from "@/lib/mode";
 import { createMemoryLimiter } from "@/lib/rate-limit/memory";
+import { createValkeyClient, createValkeyLimiter } from "@/lib/rate-limit/valkey";
 import type { RateLimiter } from "@/lib/rate-limit/types";
-import { errors } from "./errors";
 
-type Deps = { limiter?: RateLimiter; auth?: AuthGuard; db?: Db; runner?: Runner; bus?: Bus };
+type Deps = {
+  now?: () => Date;
+  limiter?: RateLimiter;
+  auth?: AuthGuard;
+  db?: Db;
+  runner?: Runner;
+  bus?: Bus;
+};
 const g = globalThis as typeof globalThis & { __hcDeps?: Deps; __hcOverrides?: Deps };
 
 const hostedAuth = createHostedAuth(() => getRequestDb());
 
-const valkeyConfigured = () => Boolean(env.VALKEY_URL) && !env.VALKEY_URL?.startsWith("memory://");
-
-const valkeyPlaceholder: RateLimiter = {
-  consume: async () => {
-    throw errors.unavailable("limiter_unavailable", "Valkey limiter is not implemented yet");
-  },
+const buildLimiter = (): RateLimiter => {
+  const url = env.VALKEY_URL;
+  return !url || url.startsWith("memory://")
+    ? createMemoryLimiter()
+    : createValkeyLimiter(createValkeyClient(url));
 };
 
 export function getLimiter(): RateLimiter {
   if (g.__hcOverrides?.limiter) return g.__hcOverrides.limiter;
   g.__hcDeps ??= {};
-  g.__hcDeps.limiter ??= valkeyConfigured() ? valkeyPlaceholder : createMemoryLimiter();
+  g.__hcDeps.limiter ??= buildLimiter();
   return g.__hcDeps.limiter;
 }
+
+export const getNow = (): Date => g.__hcOverrides?.now?.() ?? new Date();
 
 export function getAuthGuard(): AuthGuard {
   return g.__hcOverrides?.auth ?? (isHosted() ? hostedAuth : localAuth);

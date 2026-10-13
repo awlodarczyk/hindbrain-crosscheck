@@ -13,6 +13,7 @@ beforeEach(() => {
     APP_MODE: "hosted",
     APP_URL: "https://app.example.com",
     VALKEY_URL: "memory://local",
+    TRUST_PROXY: "1",
     ADMIN_EMAIL: "admin@example.com",
     ADMIN_PASSWORD: "correct horse battery staple",
   });

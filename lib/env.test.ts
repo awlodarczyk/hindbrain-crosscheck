@@ -24,12 +24,27 @@ describe("parseEnv", () => {
     const e = parseEnv({
       ...base,
       APP_MODE: "hosted",
+      TRUST_PROXY: "1",
       VALKEY_URL: "redis://valkey:6379",
       ADMIN_EMAIL: "a@b.co",
       ADMIN_PASSWORD: "correct-horse-battery",
       APP_URL: "https://crosscheck.example.com",
     });
     expect(e.APP_MODE).toBe("hosted");
+  });
+  it("requires TRUST_PROXY=1 in hosted mode", () => {
+    const full = {
+      ...base,
+      APP_MODE: "hosted",
+      VALKEY_URL: "redis://valkey:6379",
+      ADMIN_EMAIL: "a@b.co",
+      ADMIN_PASSWORD: "correct-horse-battery",
+      APP_URL: "https://crosscheck.example.com",
+    };
+    expect(() => parseEnv(full)).toThrow(
+      'TRUST_PROXY: must be "1" in hosted mode (app runs behind a reverse proxy)',
+    );
+    expect(parseEnv({ ...full, TRUST_PROXY: "1" }).TRUST_PROXY).toBe("1");
   });
   it("lists every invalid key at once", () => {
     expect(() => parseEnv({ APP_SECRET: "short", PORT: "abc" })).toThrow(
@@ -62,6 +77,7 @@ describe("parseEnv", () => {
     const full = {
       ...base,
       APP_MODE: "hosted",
+      TRUST_PROXY: "1",
       VALKEY_URL: "redis://valkey:6379",
       ADMIN_EMAIL: "a@b.co",
       ADMIN_PASSWORD: "correct-horse-battery",

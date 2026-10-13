@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 
 const HOSTED_REQUIRED = ["VALKEY_URL", "ADMIN_EMAIL", "ADMIN_PASSWORD", "APP_URL"] as const;
+const TRUST_PROXY_MESSAGE = 'must be "1" in hosted mode (app runs behind a reverse proxy)';
 const HOSTED_MESSAGE = "required when APP_MODE=hosted";
 const TEST_APP_SECRET = "test-secret-32-bytes-minimum-length!!";
 
@@ -28,6 +29,13 @@ const BaseEnvSchema = z.object({
 export const EnvSchema = BaseEnvSchema.superRefine((e, ctx) => {
   for (const key of missingHostedKeys(e)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: [key], message: HOSTED_MESSAGE });
+  }
+  if (e.APP_MODE === "hosted" && e.TRUST_PROXY !== "1") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["TRUST_PROXY"],
+      message: TRUST_PROXY_MESSAGE,
+    });
   }
 });
 
@@ -58,8 +66,13 @@ export function parseEnv(raw: Readonly<Record<string, string | undefined>>): Env
     ? []
     : result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`);
   const hosted = missingHostedKeys(normalized).map((k) => `${k}: ${HOSTED_MESSAGE}`);
+  const proxy =
+    normalized.APP_MODE === "hosted" && normalized.TRUST_PROXY !== "1"
+      ? [`TRUST_PROXY: ${TRUST_PROXY_MESSAGE}`]
+      : [];
   const all = [
     ...issues,
+    ...(issues.some((i) => i.startsWith("TRUST_PROXY:")) ? [] : proxy),
     ...hosted.filter((h) => !issues.some((i) => i.startsWith(h.split(":")[0] + ":"))),
   ];
   if (result.success && all.length === 0) return result.data;

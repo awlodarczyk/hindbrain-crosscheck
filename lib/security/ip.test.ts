@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { browserIdFromCookie, clientIp } from "./ip";
+import { clientIp } from "./ip";
 
 const req = (headers: Record<string, string>) => new Request("http://x.test/", { headers });
 
@@ -30,17 +30,9 @@ describe("clientIp", () => {
       "unknown",
     );
   });
-});
-
-describe("browserIdFromCookie", () => {
-  const id = "abcdefghij_klmnop-QRST";
-  it("reads hc_bid among other cookies", () => {
-    expect(browserIdFromCookie(req({ cookie: `a=b; hc_bid=${id}; c=d` }))).toBe(id);
-  });
-  it.each(["short", "bad value!!bad value!!", "a".repeat(129)])("rejects %s", (v) => {
-    expect(browserIdFromCookie(req({ cookie: `hc_bid=${v}` }))).toBeNull();
-  });
-  it("returns null without cookie", () => {
-    expect(browserIdFromCookie(req({}))).toBeNull();
+  it("normalises IPv4-mapped IPv6 addresses", () => {
+    const r = req({ "x-forwarded-for": "::ffff:1.2.3.4" });
+    expect(clientIp(r, { trustProxy: true })).toBe("1.2.3.4");
+    expect(clientIp(r, { trustProxy: false, socketIp: "::FFFF:5.6.7.8" })).toBe("5.6.7.8");
   });
 });

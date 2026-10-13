@@ -1,7 +1,10 @@
 import { isIP } from "node:net";
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
-const BROWSER_ID = /^[A-Za-z0-9_-]{16,128}$/;
+const MAPPED_V4 = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i;
+
+/** Rewrites IPv4-mapped IPv6 (`::ffff:a.b.c.d`) to plain IPv4. */
+const normalizeIp = (ip: string): string => MAPPED_V4.exec(ip)?.[1] ?? ip;
 
 /**
  * Resolves the caller address.
@@ -14,23 +17,11 @@ export function clientIp(
 ): string {
   if (opts.trustProxy) {
     const last = req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
-    if (last && isIP(last)) return last;
+    if (last && isIP(last)) return normalizeIp(last);
   }
-  if (opts.socketIp) return opts.socketIp;
+  if (opts.socketIp) return normalizeIp(opts.socketIp);
   if (opts.local && LOOPBACK_HOSTS.has(new URL(req.url).hostname)) {
     return "127.0.0.1";
   }
   return "unknown";
-}
-
-/** Raw `hc_bid` cookie value when well-formed; signature checking is not done here. */
-export function browserIdFromCookie(req: Request): string | null {
-  const header = req.headers.get("cookie");
-  if (!header) return null;
-  for (const part of header.split(";")) {
-    const [name, ...rest] = part.trim().split("=");
-    const value = rest.join("=");
-    if (name === "hc_bid") return BROWSER_ID.test(value) ? value : null;
-  }
-  return null;
 }

@@ -6,6 +6,9 @@ import { resetDepsForTests, setDepsForTests } from "@/lib/http/deps";
 import { createMemoryLimiter } from "@/lib/rate-limit/memory";
 import type { RateLimiter } from "@/lib/rate-limit/types";
 import { log } from "@/lib/log";
+import { env } from "@/lib/env";
+import { deriveKey } from "@/lib/security/crypto";
+import { issueBrowserId } from "@/lib/security/client-id";
 
 const allowAll: RateLimiter = {
   consume: async () => ({ allowed: true, retryAfterSec: 0, remaining: 42, layer: null }),
@@ -105,15 +108,44 @@ describe("defineRoute", () => {
     expect(res.headers.get("x-ratelimit-cost")).toBe("20");
   });
 
-  it("the same anonymous ask with a browser cookie costs the base amount", async () => {
-    const consume = vi.fn(allowAll.consume);
-    setDepsForTests({ limiter: { consume } });
+  describe("signed browser id", () => {
+    const secret = deriveKey(env.APP_SECRET, "cookie");
     const anonAsk = defineRoute({ auth: "none", op: "ask" }, () => 1);
-    const res = await anonAsk(
-      new Request("http://localhost/", { headers: { cookie: "hc_bid=abcdefghijklmnop" } }),
-    );
-    expect(consume).toHaveBeenCalledWith(expect.anything(), 10);
-    expect(res.headers.get("x-ratelimit-cost")).toBe("10");
+    const cookieOf = (res: Response) => res.headers.get("set-cookie")?.split(";")[0]?.split("=")[1];
+    const withCookie = (v: string) =>
+      new Request("http://localhost/", { headers: { cookie: `hc_bid=${v}` } });
+
+    it("issues a hardened cookie on the first request and not again once presented", async () => {
+      const first = await anonAsk(new Request("http://localhost/"));
+      const setCookie = first.headers.get("set-cookie") ?? "";
+      expect(setCookie).toMatch(/^hc_bid=/);
+      expect(setCookie).toMatch(/HttpOnly/);
+      expect(setCookie).toMatch(/SameSite=Lax/);
+      expect(first.headers.get("x-ratelimit-cost")).toBe("20");
+      const second = await anonAsk(withCookie(cookieOf(first) ?? ""));
+      expect(second.headers.get("set-cookie")).toBeNull();
+      expect(second.headers.get("x-ratelimit-cost")).toBe("20");
+    });
+
+    it("drops the multiplier once the id is older than 300 s", async () => {
+      const old = issueBrowserId(secret, new Date(Date.now() - 301_000));
+      setDepsForTests({ now: () => new Date() });
+      const res = await anonAsk(withCookie(old));
+      expect(res.headers.get("x-ratelimit-cost")).toBe("10");
+      expect(res.headers.get("set-cookie")).toBeNull();
+    });
+
+    it("reissues on a tampered cookie and sets it on error responses", async () => {
+      const v = issueBrowserId(secret, new Date(Date.now() - 400_000));
+      const res = await anonAsk(withCookie(`${v.slice(0, -2)}AA`));
+      expect(res.headers.get("set-cookie")).toMatch(/^hc_bid=/);
+      expect(res.headers.get("x-ratelimit-cost")).toBe("20");
+      const unauth = defineRoute({ op: "read" }, () => 1);
+      setDepsForTests({ auth: async () => null });
+      const err = await unauth(new Request("http://localhost/"));
+      expect(err.status).toBe(401);
+      expect(err.headers.get("set-cookie")).toMatch(/^hc_bid=/);
+    });
   });
 
   it("429 carries layer, retry-after and the effective cost", async () => {
@@ -219,6 +251,6 @@ describe("defineRoute", () => {
     setDepsForTests({ limiter: createMemoryLimiter(), auth: async () => ({ userId: "u1" }) });
     const r = defineRoute({ op: "read" }, () => 1);
     const res = await r(new Request("http://localhost/"));
-    expect(res.headers.get("x-ratelimit-remaining")).toBe("599");
+    expect(res.headers.get("x-ratelimit-remaining")).toBe("299");
   });
 });

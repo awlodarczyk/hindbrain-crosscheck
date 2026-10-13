@@ -28,6 +28,7 @@ export default defineConfig({
         APP_MODE: "hosted",
         APP_URL: hostedURL,
         VALKEY_URL: "memory://local",
+        TRUST_PROXY: "1",
         ADMIN_EMAIL: "admin@example.test",
         ADMIN_PASSWORD: "correct-horse-battery-staple",
         PROVIDER_TRANSPORT: "mock",
