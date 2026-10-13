@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FactCheck Duo</title>
+  <style>
+    :root { color-scheme: light; --ink:#1e1e1b; --muted:#73736b; --line:#deded7; --paper:#f4f3ef; --card:#fffefa; --accent:#284c45; --soft:#e8eee9; --claude:#b4552d; --gpt:#2f5f8a; --err:#9a392c; }
+    * { box-sizing:border-box }
+    body { margin:0; background:var(--paper); color:var(--ink); font:15px/1.55 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif }
+    .shell { width:min(1180px, calc(100% - 32px)); margin:0 auto; padding:40px 0 60px }
+    header { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; margin-bottom:26px }
+    .eyebrow { text-transform:uppercase; letter-spacing:.14em; font-size:11px; color:var(--muted); font-weight:700 }
+    h1 { margin:8px 0 6px; font-size:clamp(30px,4.5vw,48px); line-height:1.05; letter-spacing:-.05em; font-weight:650 }
+    .intro { max-width:640px; margin:0; color:#575750 }
+    .status { padding:8px 12px; border:1px solid var(--line); border-radius:999px; background:var(--card); color:var(--muted); font-size:12px; white-space:nowrap }
+    .dot { display:inline-block; width:7px; height:7px; background:#b27b42; border-radius:50%; margin-right:7px }
+    .dot.ready { background:#50765d }
+
+    .tabs { display:inline-flex; gap:4px; padding:4px; background:#e9e8e1; border-radius:10px; margin-bottom:14px }
+    .tabs button { background:transparent; color:var(--muted); padding:9px 14px }
+    .tabs button[aria-selected="true"] { background:var(--card); color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.08) }
+
+    .ask { border:1px solid var(--line); background:var(--card); border-radius:14px; padding:6px 6px 6px 16px; display:flex; gap:10px; align-items:flex-end }
+    .ask textarea { flex:1; min-height:56px; padding:12px 0; border:0; outline:0; resize:vertical; background:transparent; font:inherit; color:var(--ink) }
+    button { border:0; border-radius:8px; padding:12px 16px; font:600 13px/1 inherit; cursor:pointer }
+    button:disabled { cursor:wait; opacity:.55 }
+    .primary { color:#fff; background:var(--accent) }
+    .ghost { color:var(--accent); background:var(--soft) }
+    .row { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin:12px 0 20px }
+    .hint { color:var(--muted); font-size:12px }
+    .hint kbd { font:11px ui-monospace,monospace; background:#e9e8e1; padding:1px 5px; border-radius:4px }
+
+    .cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start }
+    .col { display:grid; gap:12px }
+    .card { border:1px solid var(--line); background:var(--card); border-radius:14px; overflow:hidden }
+    .card-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 16px; border-bottom:1px solid #ecebe5 }
+    .card-head h2, .card-head h3 { margin:0; font-size:14px; display:flex; align-items:center; gap:8px }
+    .brand { width:9px; height:9px; border-radius:3px; display:inline-block }
+    .claude .brand { background:var(--claude) } .chatgpt .brand { background:var(--gpt) }
+    .review .card-head { background:#faf9f4 }
+    .pill { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; white-space:nowrap }
+    .pill.busy::before { content:''; display:inline-block; width:8px; height:8px; margin-right:6px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:spin .8s linear infinite; vertical-align:-1px }
+    @keyframes spin { to { transform:rotate(360deg) } }
+    .body { padding:14px 18px; font-size:14px; line-height:1.65; overflow-wrap:anywhere; max-height:560px; overflow:auto }
+    .body:empty::before { content:attr(data-empty); color:#aaa99f }
+    .body h1,.body h2,.body h3,.body h4 { font-size:15px; margin:14px 0 6px }
+    .body p { margin:0 0 10px } .body ul,.body ol { margin:0 0 10px; padding-left:22px }
+    .body code { font:12px ui-monospace,monospace; background:#f0efe8; padding:1px 4px; border-radius:4px }
+    .body a { color:var(--accent) }
+    .body.error { color:var(--err) }
+    .verdict { display:inline-block; margin:2px 0 10px; padding:5px 10px; border-radius:6px; font-size:12px; font-weight:700; background:#eeede7 }
+    .paste { display:block; width:100%; min-height:200px; padding:14px 18px; border:0; outline:0; resize:vertical; background:transparent; font:inherit; font-size:14px; color:var(--ink) }
+    .sources { display:flex; flex-wrap:wrap; gap:6px; padding:0 16px 14px }
+    .sources:empty { display:none }
+    .sources a { color:var(--accent); font-size:12px; text-decoration:none; border:1px solid #d8e1db; border-radius:6px; padding:5px 8px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+    .note { margin-top:20px; padding:13px 16px; background:#eeede7; border-radius:10px; color:#66665e; font-size:12px }
+    [hidden] { display:none !important }
+    @media (max-width:760px) { header{display:block}.status{display:inline-block;margin-top:14px}.cols{grid-template-columns:1fr}.ask{flex-direction:column;align-items:stretch;padding:6px 6px 6px 12px} }
+  </style>
+</head>
+<body>
+<main class="shell">
+  <header>
+    <div>
+      <div class="eyebrow">Narzędzie do krytycznej oceny</div>
+      <h1>FactCheck Duo</h1>
+      <p class="intro">Zadaj pytanie raz — Claude i ChatGPT odpowiadają równolegle, a każda odpowiedź od razu trafia do drugiego modelu do weryfikacji ze źródłami.</p>
+    </div>
+    <div class="status" id="status"><span class="dot"></span>Sprawdzam konfigurację</div>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-mode="ask">Zapytaj oba modele</button>
+    <button role="tab" aria-selected="false" data-mode="paste">Wklej gotowe odpowiedzi</button>
+  </div>
+
+  <section id="askBox">
+    <div class="ask">
+      <textarea id="question" placeholder="Np. Czy rozciąganie statyczne przed treningiem zmniejsza ryzyko kontuzji?" aria-label="Pytanie"></textarea>
+      <button class="primary" id="run">Zapytaj i sprawdź</button>
+    </div>
+  </section>
+
+  <div class="row">
+    <span class="hint" id="hint"><kbd>⌘/Ctrl + Enter</kbd> uruchamia · weryfikacja startuje, gdy tylko dana odpowiedź jest gotowa</span>
+    <div>
+      <button class="ghost" id="runPaste" hidden>Sprawdź wklejone</button>
+      <button class="ghost" id="copy" disabled>Kopiuj raport</button>
+    </div>
+  </div>
+
+  <section class="cols">
+    <div class="col claude">
+      <article class="card">
+        <div class="card-head"><h2><span class="brand"></span>Odpowiedź Claude</h2><span class="pill" id="pill-claude-answer"></span></div>
+        <textarea class="paste" id="paste-claude" placeholder="Wklej odpowiedź z claude.ai…" hidden></textarea>
+        <div class="body" id="body-claude-answer" data-empty="Tu pojawi się odpowiedź Claude."></div>
+        <div class="sources" id="src-claude-answer"></div>
+      </article>
+      <article class="card review chatgpt">
+        <div class="card-head"><h3><span class="brand"></span>ChatGPT sprawdza Claude</h3><span class="pill" id="pill-claude-review"></span></div>
+        <div class="body" id="body-claude-review" data-empty="Weryfikacja ruszy automatycznie."></div>
+        <div class="sources" id="src-claude-review"></div>
+      </article>
+    </div>
+    <div class="col chatgpt">
+      <article class="card">
+        <div class="card-head"><h2><span class="brand"></span>Odpowiedź ChatGPT</h2><span class="pill" id="pill-chatgpt-answer"></span></div>
+        <textarea class="paste" id="paste-chatgpt" placeholder="Wklej odpowiedź z chatgpt.com…" hidden></textarea>
+        <div class="body" id="body-chatgpt-answer" data-empty="Tu pojawi się odpowiedź ChatGPT."></div>
+        <div class="sources" id="src-chatgpt-answer"></div>
+      </article>
+      <article class="card review claude">
+        <div class="card-head"><h3><span class="brand"></span>Claude sprawdza ChatGPT</h3><span class="pill" id="pill-chatgpt-review"></span></div>
+        <div class="body" id="body-chatgpt-review" data-empty="Weryfikacja ruszy automatycznie."></div>
+        <div class="sources" id="src-chatgpt-review"></div>
+      </article>
+    </div>
+  </section>
+
+  <div class="note"><strong>Uwaga:</strong> zgodność dwóch modeli nie jest dowodem prawdziwości — oba mogą się mylić w ten sam sposób. Otwieraj podane źródła, zwłaszcza w kwestiach medycznych. Treść trafia do API OpenAI i Anthropic; aplikacja niczego nie zapisuje.</div>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const COLS = { claude: { label: 'Claude', provider: 'claude', reviewer: 'openai' },
+               chatgpt: { label: 'ChatGPT', provider: 'openai', reviewer: 'claude' } };
+let mode = 'ask', report = {}, busy = 0;
+
+// ── Bezpieczny, minimalny renderer markdown ──
+const esc = s => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function inline(s) {
+  return esc(s)
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>');
+}
+function md(text) {
+  const out = []; let list = null, para = [];
+  const flushP = () => { if (para.length) { out.push('<p>' + para.map(inline).join('<br>') + '</p>'); para = []; } };
+  const flushL = () => { if (list) { out.push(`<${list.t}>` + list.items.map(i => '<li>' + inline(i) + '</li>').join('') + `</${list.t}>`); list = null; } };
+  for (const line of text.split('\n')) {
+    let m;
+    if (!line.trim()) { flushP(); flushL(); continue; }
+    if ((m = line.match(/^(#{1,4})\s+(.*)/))) { flushP(); flushL(); out.push(`<h${m[1].length + 1}>${inline(m[2])}</h${m[1].length + 1}>`); continue; }
+    if ((m = line.match(/^\s*[-*•]\s+(.*)/)) || (m = line.match(/^\s*\d+[.)]\s+(.*)/))) {
+      const t = /^\s*\d/.test(line) ? 'ol' : 'ul'; flushP();
+      if (!list || list.t !== t) { flushL(); list = { t, items: [] }; }
+      list.items.push(m[1]); continue;
+    }
+    flushL(); para.push(line);
+  }
+  flushP(); flushL();
+  return out.join('');
+}
+
+// ── UI ──
+function setSlot(id, { state, text, error, citations }) {
+  const pill = $('#pill-' + id), body = $('#body-' + id), src = $('#src-' + id);
+  pill.className = 'pill' + (state === 'busy' ? ' busy' : '');
+  pill.textContent = state === 'busy' ? (id.endsWith('review') ? 'sprawdza źródła' : 'odpowiada')
+                   : state === 'error' ? 'błąd' : state === 'done' ? `${(citations || []).length} źródeł` : '';
+  body.classList.toggle('error', state === 'error');
+  if (state === 'busy' || state === 'idle') body.innerHTML = '';
+  if (error) body.textContent = error;
+  if (text) {
+    const v = text.match(/OCENA OGÓLNA:\s*([^\n]+)/i);
+    body.innerHTML = (v ? `<div class="verdict">${esc(v[1].replace(/\*/g, '').trim())}</div>` : '') +
+                     md(v ? text.replace(v[0], '') : text);
+  }
+  src.replaceChildren(...(citations || []).map(c => {
+    const a = document.createElement('a');
+    a.href = c.url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.title = c.url;
+    a.textContent = (c.title || c.url).slice(0, 80); return a;
+  }));
+}
+
+async function api(url, payload) {
+  const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+  return d;
+}
+
+function lock(delta) {
+  busy += delta;
+  for (const b of ['#run', '#runPaste']) $(b).disabled = busy > 0;
+  $('#copy').disabled = busy > 0 || !Object.keys(report).length;
+}
+
+async function runReview(col, text, question) {
+  const c = COLS[col];
+  setSlot(col + '-review', { state: 'busy' });
+  try {
+    const d = await api('/api/review', { text, source: c.label, reviewer: c.reviewer, question });
+    setSlot(col + '-review', { state: 'done', ...d }); report[col + '-review'] = d;
+  } catch (e) { setSlot(col + '-review', { state: 'error', error: e.message }); }
+}
+
+async function runColumn(col, question) {
+  lock(1);
+  try {
+    setSlot(col + '-answer', { state: 'busy' }); setSlot(col + '-review', { state: 'idle' });
+    let d;
+    try { d = await api('/api/ask', { provider: COLS[col].provider, question }); }
+    catch (e) { setSlot(col + '-answer', { state: 'error', error: e.message }); return; }
+    setSlot(col + '-answer', { state: 'done', ...d }); report[col + '-answer'] = d;
+    await runReview(col, d.text, question);   // weryfikacja od razu, bez czekania na drugi model
+  } finally { lock(-1); }
+}
+
+function startAsk() {
+  const q = $('#question').value.trim();
+  if (!q) { $('#question').focus(); return; }
+  report = { question: q };
+  runColumn('claude', q); runColumn('chatgpt', q);
+}
+
+async function startPaste() {
+  const jobs = [];
+  report = {};
+  for (const col of Object.keys(COLS)) {
+    const t = $('#paste-' + col).value.trim();
+    if (!t) continue;
+    report[col + '-answer'] = { text: t, citations: [] };
+    lock(1); jobs.push(runReview(col, t).finally(() => lock(-1)));
+  }
+  if (!jobs.length) alert('Wklej przynajmniej jedną odpowiedź.');
+  await Promise.all(jobs);
+}
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.mode === m));
+  $('#askBox').hidden = m !== 'ask'; $('#runPaste').hidden = m !== 'paste';
+  for (const col of Object.keys(COLS)) {
+    $('#paste-' + col).hidden = m !== 'paste';
+    $('#body-' + col + '-answer').hidden = m === 'paste';
+    $('#src-' + col + '-answer').hidden = m === 'paste';
+  }
+  $('#hint').innerHTML = m === 'ask'
+    ? '<kbd>⌘/Ctrl + Enter</kbd> uruchamia · weryfikacja startuje, gdy tylko dana odpowiedź jest gotowa'
+    : 'Wklej odpowiedź z jednego lub obu okien czatu — każdą sprawdzi drugi model';
+}
+
+function buildReport() {
+  const part = (title, d) => d ? `## ${title}\n\n${d.text}\n` + ((d.citations || []).length ? '\nŹródła:\n' + d.citations.map(c => `- ${c.title}: ${c.url}`).join('\n') + '\n' : '') : '';
+  return [report.question ? `# Pytanie\n\n${report.question}\n` : '',
+    part('Odpowiedź Claude', report['claude-answer']), part('ChatGPT sprawdza Claude', report['claude-review']),
+    part('Odpowiedź ChatGPT', report['chatgpt-answer']), part('Claude sprawdza ChatGPT', report['chatgpt-review'])]
+    .filter(Boolean).join('\n');
+}
+
+document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+$('#run').addEventListener('click', startAsk);
+$('#runPaste').addEventListener('click', startPaste);
+$('#question').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) startAsk(); });
+$('#copy').addEventListener('click', async () => {
+  await navigator.clipboard.writeText(buildReport());
+  $('#copy').textContent = 'Skopiowano ✓'; setTimeout(() => $('#copy').textContent = 'Kopiuj raport', 1500);
+});
+
+(async () => {
+  try {
+    const d = await (await fetch('/api/status')).json();
+    const ready = d.openai && d.claude;
+    $('#status').innerHTML = `<span class="dot ${ready ? 'ready' : ''}"></span>` +
+      (ready ? esc(`${d.claudeModel} · ${d.openaiModel}`) : `Brakuje klucza: ${[!d.claude && 'Anthropic', !d.openai && 'OpenAI'].filter(Boolean).join(', ')}`);
+  } catch { $('#status').innerHTML = '<span class="dot"></span>Serwer nie odpowiada'; }
+})();
+</script>
+</body>
+</html>
