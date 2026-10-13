@@ -20,6 +20,7 @@ export const Slider = React.forwardRef<
     {(props.value ?? props.defaultValue ?? [0]).map((_, i) => (
       <SliderPrimitive.Thumb
         key={i}
+        aria-label={props["aria-label"]}
         className={cn(
           "block size-[14px] cursor-pointer rounded-full border-2 border-accent-default bg-bg-card transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50",
           focusRing,
