@@ -1,4 +1,5 @@
 import "server-only";
+import { createHostedAuth } from "@/lib/auth/hosted-guard";
 import { localAuth, type AuthGuard } from "@/lib/auth/guard";
 import { getDb, type Db } from "@/lib/db/client";
 import { env } from "@/lib/env";
@@ -13,6 +14,8 @@ import { errors } from "./errors";
 type Deps = { limiter?: RateLimiter; auth?: AuthGuard; db?: Db; runner?: Runner; bus?: Bus };
 const g = globalThis as typeof globalThis & { __hcDeps?: Deps; __hcOverrides?: Deps };
 
+const hostedAuth = createHostedAuth(() => getRequestDb());
+
 const valkeyConfigured = () => Boolean(env.VALKEY_URL) && !env.VALKEY_URL?.startsWith("memory://");
 
 const valkeyPlaceholder: RateLimiter = {
@@ -20,8 +23,6 @@ const valkeyPlaceholder: RateLimiter = {
     throw errors.unavailable("limiter_unavailable", "Valkey limiter is not implemented yet");
   },
 };
-
-const hostedGuardPlaceholder: AuthGuard = async () => null;
 
 export function getLimiter(): RateLimiter {
   if (g.__hcOverrides?.limiter) return g.__hcOverrides.limiter;
@@ -31,7 +32,7 @@ export function getLimiter(): RateLimiter {
 }
 
 export function getAuthGuard(): AuthGuard {
-  return g.__hcOverrides?.auth ?? (isHosted() ? hostedGuardPlaceholder : localAuth);
+  return g.__hcOverrides?.auth ?? (isHosted() ? hostedAuth : localAuth);
 }
 
 export const getRequestDb = (): Db => g.__hcOverrides?.db ?? getDb();

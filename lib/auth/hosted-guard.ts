@@ -1,0 +1,15 @@
+import "server-only";
+import { getDb, type Db } from "@/lib/db/client";
+import type { AuthGuard } from "./guard";
+import { readCookie, SESSION_COOKIE } from "./cookies";
+import { readAuthSession } from "./session";
+
+/** Guard that resolves the user from the `hc_session` cookie; null when absent, unknown or expired. */
+export function createHostedAuth(getDbFn: () => Db, now?: () => Date): AuthGuard {
+  return async (req) => {
+    const session = readAuthSession(getDbFn(), readCookie(req, SESSION_COOKIE), now);
+    return session ? { userId: session.userId } : null;
+  };
+}
+
+export const hostedAuth: AuthGuard = createHostedAuth(getDb);

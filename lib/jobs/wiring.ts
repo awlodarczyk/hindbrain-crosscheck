@@ -1,7 +1,9 @@
+import { bootstrapAdmin } from "@/lib/auth/bootstrap-admin";
 import { getDb, type Db } from "@/lib/db/client";
 import { PROVIDER_IDS, type ProviderId } from "@/lib/db/enums";
 import { env } from "@/lib/env";
 import { log } from "@/lib/log";
+import { isHosted } from "@/lib/mode";
 import { ProviderError } from "@/lib/providers/errors";
 import { createMockProvider } from "@/lib/providers/mock";
 import { createProvider, resolveProviderConfigs } from "@/lib/providers/registry";
@@ -69,6 +71,13 @@ export function bootOnce(): void {
     sweepInterrupted(getDb(), new Date());
   } catch (e) {
     log.error({ err: e }, "boot sweep of interrupted calls failed");
+  }
+  if (isHosted()) {
+    try {
+      bootstrapAdmin(getDb(), env);
+    } catch (e) {
+      log.error({ err: e }, "admin bootstrap failed");
+    }
   }
 }
 

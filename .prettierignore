@@ -1,5 +1,6 @@
 node_modules
 .next
+.next-hosted
 coverage
 playwright-report
 test-results
