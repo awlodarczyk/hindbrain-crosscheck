@@ -1,4 +1,5 @@
 import { ProviderParam } from "@/lib/api/settings-dto";
+import type { ProviderId } from "@/lib/db/enums";
 import { env } from "@/lib/env";
 import { getRequestDb } from "@/lib/http/deps";
 import { errors } from "@/lib/http/errors";
@@ -17,14 +18,25 @@ export const POST = defineRoute({ op: "provider_test" }, async ({ ctx, params })
   if (!id.success) throw errors.notFound();
   const db = getRequestDb();
   const key = deriveKey(env.APP_SECRET, "secrets");
-  const cfg = resolveProviderConfigs(
-    getSettings(db, ctx.userId),
-    {
+  const settings = getSettings(db, ctx.userId);
+  let secrets: Record<ProviderId, string | null>;
+  try {
+    secrets = {
       claude: getSecret(db, key, ctx.userId, "claude"),
       chatgpt: getSecret(db, key, ctx.userId, "chatgpt"),
-    },
-    env,
-  )[id.data];
+    };
+  } catch {
+    const transport = resolveProviderConfigs(settings, { claude: null, chatgpt: null }, env)[
+      id.data
+    ].transport;
+    const unreadable: ProviderStatus = {
+      ok: false,
+      transport,
+      detail: "Stored key cannot be decrypted. Replace it.",
+    };
+    return unreadable;
+  }
+  const cfg = resolveProviderConfigs(settings, secrets, env)[id.data];
   try {
     return await createProvider(cfg).test(AbortSignal.timeout(TEST_TIMEOUT_MS));
   } catch {

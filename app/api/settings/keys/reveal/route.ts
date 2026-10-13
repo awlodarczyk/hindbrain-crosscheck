@@ -24,7 +24,12 @@ export const POST = defineRoute(
       }
       await verifyRevealPassword(db, ctx.userId, body.password);
     }
-    const apiKey = getSecret(db, deriveKey(env.APP_SECRET, "secrets"), ctx.userId, body.provider);
+    let apiKey: string | null;
+    try {
+      apiKey = getSecret(db, deriveKey(env.APP_SECRET, "secrets"), ctx.userId, body.provider);
+    } catch {
+      throw errors.conflict("secret_unreadable", "The stored key cannot be decrypted. Replace it.");
+    }
     if (apiKey === null) throw errors.notFound();
     appendEvent(db, {
       sessionId: null,

@@ -21,10 +21,11 @@ const ENV_KEY: Record<ProviderId, "ANTHROPIC_API_KEY" | "OPENAI_API_KEY"> = {
   chatgpt: "OPENAI_API_KEY",
 };
 
-function secretView(
-  envKey: string | undefined,
-  stored: { masked: string; updatedAt: string } | null,
-): SecretView {
+type StoredSecret =
+  | { broken: false; masked: string; updatedAt: string }
+  | { broken: true; masked: null; updatedAt: string };
+
+function secretView(envKey: string | undefined, stored: StoredSecret | null): SecretView {
   if (envKey) {
     return {
       source: stored ? "db" : "env",
@@ -34,17 +35,37 @@ function secretView(
       updatedAt: stored?.updatedAt ?? null,
     };
   }
+  if (stored?.broken) {
+    return {
+      source: "db",
+      effective: "none",
+      masked: null,
+      valid: false,
+      updatedAt: stored.updatedAt,
+      broken: true,
+    };
+  }
   if (stored) {
-    return { source: "db", effective: "db", ...stored, valid: null };
+    return {
+      source: "db",
+      effective: "db",
+      masked: stored.masked,
+      valid: null,
+      updatedAt: stored.updatedAt,
+    };
   }
   return { source: "none", effective: "none", masked: null, valid: null, updatedAt: null };
 }
 
-function storedSecret(db: Db, userId: string, provider: ProviderId) {
+function storedSecret(db: Db, userId: string, provider: ProviderId): StoredSecret | null {
   const row = listSecretRows(db, userId).find((r) => r.provider === provider);
   if (!row) return null;
-  const plain = getSecret(db, deriveKey(realEnv.APP_SECRET, "secrets"), userId, provider);
-  return plain === null ? null : { masked: mask(plain), updatedAt: row.updatedAt };
+  try {
+    const plain = getSecret(db, deriveKey(realEnv.APP_SECRET, "secrets"), userId, provider);
+    return plain === null ? null : { broken: false, masked: mask(plain), updatedAt: row.updatedAt };
+  } catch {
+    return { broken: true, masked: null, updatedAt: row.updatedAt };
+  }
 }
 
 /** Assembles everything the settings screen shows; never returns a plaintext key. */

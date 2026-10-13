@@ -1,9 +1,12 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestDb } from "@/lib/db/test-db";
 import type { Db } from "@/lib/db/client";
 import { resetDepsForTests, setDepsForTests } from "@/lib/http/deps";
 import { createMemoryLimiter } from "@/lib/rate-limit/memory";
 import { listUserEvents } from "@/lib/repos/events";
+import { providerSecrets } from "@/lib/db/schema-auth";
+import * as registry from "@/lib/providers/registry";
 import { resetEnvForTests } from "@/lib/env";
 import { ensureLocalUser, LOCAL_USER_ID } from "@/lib/repos/users";
 
@@ -11,8 +14,8 @@ import { ensureLocalUser, LOCAL_USER_ID } from "@/lib/repos/users";
 const ORIGINAL = { ...process.env };
 let db: Db;
 let settingsRoute: typeof import("@/app/api/settings/route");
-let secretsRoute: typeof import("@/app/api/settings/secrets/route");
-let revealRoute: typeof import("@/app/api/settings/secrets/reveal/route");
+let secretsRoute: typeof import("@/app/api/settings/keys/route");
+let revealRoute: typeof import("@/app/api/settings/keys/reveal/route");
 let testRoute: typeof import("@/app/api/providers/[id]/test/route");
 
 beforeAll(async () => {
@@ -21,8 +24,8 @@ beforeAll(async () => {
   delete process.env.OPENAI_API_KEY;
   resetEnvForTests();
   settingsRoute = await import("@/app/api/settings/route");
-  secretsRoute = await import("@/app/api/settings/secrets/route");
-  revealRoute = await import("@/app/api/settings/secrets/reveal/route");
+  secretsRoute = await import("@/app/api/settings/keys/route");
+  revealRoute = await import("@/app/api/settings/keys/reveal/route");
   testRoute = await import("@/app/api/providers/[id]/test/route");
 });
 afterAll(() => {
@@ -112,5 +115,84 @@ describe("settings api", () => {
   it("provider test 404s for unknown ids", async () => {
     const res = await testRoute.POST(json("POST"), { params: Promise.resolve({ id: "gemini" }) });
     expect(res.status).toBe(404);
+  });
+});
+
+describe("undecryptable stored key", () => {
+  const corrupt = () => {
+    db.update(providerSecrets)
+      .set({ ciphertext: "AAAA", iv: "AAAA", tag: "AAAA" })
+      .where(eq(providerSecrets.provider, "claude"))
+      .run();
+  };
+  beforeEach(async () => {
+    await secretsRoute.PUT(json("PUT", { provider: "claude", apiKey: KEY }));
+    corrupt();
+  });
+
+  it("GET flags the secret as broken", async () => {
+    const body = await get();
+    expect(body.ok).toBe(true);
+    expect(body.data.secrets.claude).toMatchObject({
+      source: "db",
+      masked: null,
+      valid: false,
+      broken: true,
+    });
+  });
+
+  it("reveal answers 409 secret_unreadable", async () => {
+    const res = await revealRoute.POST(json("POST", { provider: "claude" }));
+    expect(res.status).toBe(409);
+    expect((await res.json()).error.code).toBe("secret_unreadable");
+  });
+
+  it("provider test reports a failed status", async () => {
+    const res = await testRoute.POST(json("POST"), { params: Promise.resolve({ id: "claude" }) });
+    expect((await res.json()).data).toEqual({
+      ok: false,
+      transport: "mock",
+      detail: "Stored key cannot be decrypted. Replace it.",
+    });
+  });
+});
+
+describe("provider test failure", () => {
+  it("reports 'Test failed.' when the provider cannot be created", async () => {
+    vi.spyOn(registry, "createProvider").mockImplementation(() => {
+      throw new Error("boom");
+    });
+    try {
+      const res = await testRoute.POST(json("POST"), { params: Promise.resolve({ id: "claude" }) });
+      expect((await res.json()).data).toMatchObject({ ok: false, detail: "Test failed." });
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+});
+
+describe("hosted mode reveal", () => {
+  const keys = ["APP_MODE", "APP_URL", "VALKEY_URL", "ADMIN_EMAIL", "ADMIN_PASSWORD"] as const;
+  const saved = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+  beforeEach(() => {
+    process.env.APP_MODE = "hosted";
+    process.env.APP_URL = "https://app.example.com";
+    process.env.VALKEY_URL = "memory://local";
+    process.env.ADMIN_EMAIL = "admin@example.com";
+    process.env.ADMIN_PASSWORD = "correct horse battery staple";
+    resetEnvForTests();
+  });
+  afterEach(() => {
+    for (const k of keys) {
+      if (saved[k] === undefined) delete process.env[k];
+      else process.env[k] = saved[k];
+    }
+    resetEnvForTests();
+  });
+
+  it("rejects a reveal without a password with 400", async () => {
+    await secretsRoute.PUT(json("PUT", { provider: "claude", apiKey: KEY }));
+    const res = await revealRoute.POST(json("POST", { provider: "claude" }));
+    expect(res.status).toBe(400);
   });
 });

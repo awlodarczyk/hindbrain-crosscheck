@@ -1,4 +1,6 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { providerSecrets } from "@/lib/db/schema-auth";
 import { createTestDb } from "@/lib/db/test-db";
 import { putSecret } from "@/lib/repos/secrets";
 import { ensureLocalUser, LOCAL_USER_ID as U } from "@/lib/repos/users";
@@ -83,5 +85,37 @@ describe("buildSettingsView", () => {
       detect,
     });
     expect(v.secrets.chatgpt).toMatchObject({ source: "env", effective: "env", valid: true });
+  });
+
+  it("marks an undecryptable db secret as broken instead of throwing", async () => {
+    const db = createTestDb();
+    ensureLocalUser(db);
+    putSecret(db, KEY, U, "claude", DB_KEY);
+    db.update(providerSecrets)
+      .set({ ciphertext: "AAAA", iv: "AAAA", tag: "AAAA" })
+      .where(eq(providerSecrets.provider, "claude"))
+      .run();
+    const v = await buildSettingsView(db, U, { env: baseEnv, detect });
+    expect(v.secrets.claude).toMatchObject({
+      source: "db",
+      effective: "none",
+      masked: null,
+      valid: false,
+      broken: true,
+    });
+    expect(v.secrets.claude.updatedAt).not.toBeNull();
+  });
+
+  it("lets the env key win over a broken db key", async () => {
+    const db = createTestDb();
+    ensureLocalUser(db);
+    putSecret(db, KEY, U, "claude", DB_KEY);
+    db.update(providerSecrets).set({ tag: "AAAA" }).run();
+    const v = await buildSettingsView(db, U, {
+      env: { ...baseEnv, ANTHROPIC_API_KEY: ENV_KEY },
+      detect,
+    });
+    expect(v.secrets.claude).toMatchObject({ source: "db", effective: "env", valid: true });
+    expect(v.secrets.claude.broken).toBeUndefined();
   });
 });

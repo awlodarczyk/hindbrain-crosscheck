@@ -23,6 +23,8 @@ export type SecretView = {
   masked: string | null;
   valid: boolean | null;
   updatedAt: string | null;
+  /** True when the stored key exists but cannot be decrypted. */
+  broken?: boolean;
 };
 
 export type SettingsView = {

@@ -13,7 +13,7 @@ export const GET = defineRoute({ op: "read" }, ({ ctx }) =>
 
 export const PUT = defineRoute({ op: "settings_write", body: SettingsSchema }, ({ ctx, body }) => {
   const db = getRequestDb();
-  const settings = putSettings(db, ctx.userId, SettingsSchema.parse(body), () => ctx.now);
+  const settings = putSettings(db, ctx.userId, body, () => ctx.now);
   appendEvent(db, {
     sessionId: null,
     userId: ctx.userId,
