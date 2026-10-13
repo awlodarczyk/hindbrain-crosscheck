@@ -15,6 +15,8 @@ const BaseEnvSchema = z.object({
   VALKEY_URL: z.string().url().optional(),
   CLI_ENABLED: z.enum(["0", "1"]).default("1"),
   PROVIDER_TRANSPORT: z.enum(["auto", "mock"]).default("auto"),
+  MOCK_DELAY_MS: z.coerce.number().int().min(0).default(0),
+  MOCK_FAIL: z.enum(["claude", "chatgpt"]).optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   ADMIN_EMAIL: z.string().email().optional(),
