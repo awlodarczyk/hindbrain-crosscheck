@@ -51,10 +51,20 @@ function Frame({ children }: { children: ReactNode }) {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-[24px] font-semibold text-text-primary">Settings</h1>
-            <p className="mt-1 text-[14px] text-text-secondary">{SUB[view.mode]}</p>
+            <p className="mt-1 text-base md:text-[14px] text-text-secondary">{SUB[view.mode]}</p>
           </div>
           <SavedIndicator savedAt={savedAt} saving={saving} />
         </div>
+        {view.mode === "local" && dataDir && (
+          <Button
+            variant="secondary"
+            className="mt-4 min-h-11 md:hidden"
+            onClick={() => void copyPath(dataDir)}
+          >
+            <Copy className="size-4" />
+            Copy data path
+          </Button>
+        )}
         <div className="mt-6 grid gap-6 md:grid-cols-[170px_minmax(0,740px)]">
           <Nav active={active} />
           <div className="flex flex-col gap-6">{children}</div>

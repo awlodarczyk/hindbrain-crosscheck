@@ -21,4 +21,9 @@ describe("Badge", () => {
     );
     expect(screen.getByText("GPT").querySelector(".bg-model-chatgpt")).toBeNull();
   });
+
+  it("colours the partial tone with the unverifiable palette", () => {
+    render(<Badge tone="partial">Partial</Badge>);
+    expect(screen.getByText("Partial")).toHaveClass("text-status-unverifiable");
+  });
 });

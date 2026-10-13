@@ -13,18 +13,24 @@ export function ReviewCard({
   call,
   claims,
   onRetry,
+  collapsible,
+  defaultOpen,
 }: {
   reviewer: ProviderId;
   target: ProviderId;
   call: Call | null;
   claims: readonly Claim[];
   onRetry?: (callId: string) => void;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
 }) {
   const title = `${PROVIDER_LABEL[reviewer]} checks ${PROVIDER_LABEL[target]}`;
   const flagged = claims.filter((c) => c.verdict === "disputed").length;
   const done = call?.status === "done";
   return (
     <CardFrame
+      collapsible={collapsible}
+      defaultOpen={defaultOpen}
       provider={reviewer}
       label={title}
       title={title}

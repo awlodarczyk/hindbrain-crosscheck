@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 export function useMedia(query: string): boolean {
   const [matches, setMatches] = useState(false);
   useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
     const mql = window.matchMedia(query);
     const sync = () => setMatches(mql.matches);
     sync();

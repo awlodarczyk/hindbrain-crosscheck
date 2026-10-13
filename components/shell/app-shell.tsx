@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { HistoryItem } from "./group-by-day";
 import { Drawer } from "./drawer";
+import { MobileChromeContext } from "./mobile-chrome";
 import { MobileTopbar } from "./mobile-topbar";
 import { SessionListContext } from "./session-list-context";
 import { RowMenu } from "./row-menu";
@@ -29,6 +30,9 @@ export function AppShell({ children, initialItems, statusLine }: AppShellProps) 
   const isMobile = useMedia("(max-width: 768px)");
   const [open, setOpen] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [title, setTitle] = useState<string | null>(null);
+  const [actionsEl, setActionsEl] = useState<HTMLElement | null>(null);
+  const chrome = useMemo(() => ({ actionsEl, setTitle }), [actionsEl]);
   const [now] = useState(() => new Date());
   const list = useSessionList(initialItems);
   const { items, refresh, upsert } = list;
@@ -38,12 +42,6 @@ export function AppShell({ children, initialItems, statusLine }: AppShellProps) 
   useEffect(() => {
     if (activeId) void refresh();
   }, [activeId, refresh]);
-
-  useEffect(() => {
-    const onChanged = () => void refresh();
-    window.addEventListener("hc:history-changed", onChanged);
-    return () => window.removeEventListener("hc:history-changed", onChanged);
-  }, [refresh]);
 
   const onNavigate = (id: string) => router.push(`/s/${id}`);
   const onNew = () => router.push("/");
@@ -93,19 +91,27 @@ export function AppShell({ children, initialItems, statusLine }: AppShellProps) 
   );
   const frame = isMobile ? (
     <div className="flex h-dvh flex-col bg-bg-page">
-      <MobileTopbar title="hindbrain crosscheck" onMenu={() => setOpen(true)} />
+      <MobileTopbar
+        title={title ?? "hindbrain crosscheck"}
+        onMenu={() => setOpen(true)}
+        actions={<div ref={setActionsEl} className="flex items-center justify-end" />}
+      />
       <Drawer open={open} onOpenChange={setOpen} title="Navigation">
         {sidebar(() => setOpen(false))}
       </Drawer>
-      <main className="min-w-0 flex-1 overflow-y-auto text-base">{children}</main>
+      <main className="min-w-0 flex-1 overflow-y-auto text-base md:text-sm">{children}</main>
       {palette}
     </div>
   ) : (
     <div className="grid h-dvh grid-cols-[264px_1fr] bg-bg-page">
       {sidebar(() => {})}
-      <main className="min-w-0 overflow-y-auto text-sm">{children}</main>
+      <main className="min-w-0 overflow-y-auto text-base md:text-sm">{children}</main>
       {palette}
     </div>
   );
-  return <SessionListContext.Provider value={actions}>{frame}</SessionListContext.Provider>;
+  return (
+    <SessionListContext.Provider value={actions}>
+      <MobileChromeContext.Provider value={chrome}>{frame}</MobileChromeContext.Provider>
+    </SessionListContext.Provider>
+  );
 }

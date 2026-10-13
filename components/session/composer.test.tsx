@@ -95,4 +95,43 @@ describe("Composer", () => {
     setup({ variant: "docked" });
     expect(document.querySelector('[data-variant="docked"]')).not.toBeNull();
   });
+
+  it("uses the short placeholder when docked and the long one while disabled", () => {
+    setup({ variant: "docked" });
+    expect(box()).toHaveAttribute("placeholder", "Ask a new question…");
+  });
+
+  it("keeps the running placeholder while disabled", () => {
+    setup({ variant: "docked", disabled: true, disabledPlaceholder: "Running… wait" });
+    expect(box()).toHaveAttribute("placeholder", "Running… wait");
+  });
+
+  it("submits once when triggered twice before the first resolves", async () => {
+    let release!: () => void;
+    const onSubmit = vi.fn(() => new Promise<void>((r) => (release = r)));
+    setup({ onSubmit });
+    await userEvent.type(box(), "q");
+    fireEvent.keyDown(box(), { key: "Enter", metaKey: true });
+    fireEvent.keyDown(box(), { key: "Enter", metaKey: true });
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    release();
+  });
+
+  it("renders a round 44 px send button when docked on a narrow screen", async () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockReturnValue({
+        matches: true,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
+    );
+    const onSubmit = setup({ variant: "docked" });
+    await userEvent.type(box(), "q");
+    const send = ask();
+    expect(send).toHaveClass("size-11", "rounded-full");
+    await userEvent.click(send);
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    vi.unstubAllGlobals();
+  });
 });

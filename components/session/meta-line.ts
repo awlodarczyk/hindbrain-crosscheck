@@ -22,7 +22,10 @@ export function domainOf(url: string): string {
   }
 }
 
-function formatWhen(iso: string, locale: string | undefined, timeZone: string | undefined) {
+/** Fixed locale so server and client render the same date text. */
+const META_LOCALE = "en-GB";
+
+function formatWhen(iso: string, locale: string, timeZone: string | undefined) {
   const d = new Date(iso);
   const date = new Intl.DateTimeFormat(locale, {
     day: "numeric",
@@ -39,7 +42,7 @@ function formatWhen(iso: string, locale: string | undefined, timeZone: string | 
   return `${date} · ${time}`;
 }
 
-function runningMeta(session: Session, view: LatestView, locale?: string, timeZone?: string) {
+function runningMeta(session: Session, view: LatestView, locale: string, timeZone?: string) {
   const time = formatWhen(session.createdAt, locale, timeZone).split(" · ").at(-1);
   const models = [view.answers.claude?.model, view.answers.chatgpt?.model]
     .filter(Boolean)
@@ -54,7 +57,7 @@ function runningMeta(session: Session, view: LatestView, locale?: string, timeZo
 export function metaLine(
   session: Session,
   view: LatestView,
-  locale?: string,
+  locale = META_LOCALE,
   timeZone?: string,
 ): string {
   const calls = viewCalls(view);

@@ -14,7 +14,7 @@ export const VERDICT_LABEL: Record<Verdict, string> = {
 const VERDICT_TONE: Record<Verdict, BadgeTone> = {
   supported: "supported",
   disputed: "disputed",
-  partial: "unverifiable",
+  partial: "partial",
   unverifiable: "unverifiable",
 };
 
@@ -35,7 +35,7 @@ export function ClaimRow({ claim }: { claim: Claim }) {
   return (
     <div
       className={cn(
-        "grid grid-cols-[96px_1fr_auto] items-start gap-3 border-b border-border-default px-4 py-3 last:border-0",
+        "grid grid-cols-1 items-start gap-2 border-b border-border-default px-4 py-3 last:border-0 md:grid-cols-[96px_1fr_auto] md:gap-3",
         claim.verdict === "disputed" && "bg-bg-disputed",
       )}
     >
@@ -43,15 +43,17 @@ export function ClaimRow({ claim }: { claim: Claim }) {
         <VerdictBadge verdict={claim.verdict} />
       </div>
       <div className="min-w-0">
-        <p className="text-[13px] font-medium text-text-primary">{claim.claim}</p>
-        {claim.note && <p className="mt-0.5 text-[12px] text-text-secondary">{claim.note}</p>}
+        <p className="text-base font-medium text-text-primary md:text-[13px]">{claim.claim}</p>
+        {claim.note && (
+          <p className="mt-0.5 text-sm text-text-secondary md:text-[12px]">{claim.note}</p>
+        )}
       </div>
       {isHttpUrl(claim.sourceUrl) && (
         <a
           href={claim.sourceUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="max-w-[140px] truncate font-mono text-[12px] text-text-muted hover:text-text-primary hover:underline"
+          className="block max-w-full truncate py-2.5 font-mono text-[12px] md:max-w-[140px] md:py-0 text-text-muted hover:text-text-primary hover:underline"
         >
           {domainOf(claim.sourceUrl)}
         </a>

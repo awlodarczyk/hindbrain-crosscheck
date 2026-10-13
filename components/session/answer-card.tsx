@@ -12,15 +12,21 @@ export function AnswerCard({
   provider,
   call,
   onRetry,
+  collapsible,
+  defaultOpen,
 }: {
   provider: ProviderId;
   call: Call | null;
   onRetry?: (callId: string) => void;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
 }) {
   const done = call?.status === "done" && call.html !== null;
   const cites = call?.citations ?? [];
   return (
     <CardFrame
+      collapsible={collapsible}
+      defaultOpen={defaultOpen}
       provider={provider}
       label={`${PROVIDER_LABEL[provider]} answer`}
       title={PROVIDER_LABEL[provider]}

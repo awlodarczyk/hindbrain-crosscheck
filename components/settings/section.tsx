@@ -26,11 +26,13 @@ export function Row({
   children: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
+    <div className="flex flex-col items-stretch gap-2 px-4 py-3 md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-x-4">
       <div className="min-w-0">
-        <div className="text-[13px] font-medium text-text-primary">{title}</div>
+        <div className="text-base font-medium text-text-primary md:text-[13px]">{title}</div>
         {sub && (
-          <div className={cn("text-[12px] text-text-secondary", monoSub && "font-mono")}>{sub}</div>
+          <div className={cn("text-sm text-text-secondary md:text-[12px]", monoSub && "font-mono")}>
+            {sub}
+          </div>
         )}
       </div>
       {children}

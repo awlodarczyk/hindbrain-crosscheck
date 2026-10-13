@@ -29,7 +29,7 @@ export function ModelChip({ provider, model, options, onChange, disabled }: Mode
       )}
     >
       <span aria-hidden="true" className={cn("size-2 rounded-full", DOT[provider])} />
-      <span>{model}</span>
+      <span aria-hidden="true">{model}</span>
       <ChevronDown aria-hidden="true" className="size-3.5 text-text-muted" />
       <select
         aria-label={`${NAME[provider]} model`}

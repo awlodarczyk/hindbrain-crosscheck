@@ -4,6 +4,7 @@ import * as React from "react";
 import { ArrowUp } from "lucide-react";
 import { PasteFields, type Pasted } from "@/components/empty/paste-fields";
 import { Button } from "@/components/ui/button";
+import { useMedia } from "@/components/shell/use-media";
 import { Kbd } from "@/components/ui/kbd";
 import type { SettingsView } from "@/lib/api/settings-dto";
 import type { ProviderId } from "@/lib/db/enums";
@@ -37,6 +38,7 @@ export type ComposerProps = {
 
 const PROVIDERS: readonly ProviderId[] = ["claude", "chatgpt"];
 const PLACEHOLDER = "e.g. Does static stretching before training reduce injury risk?";
+const DOCKED_PLACEHOLDER = "Ask a new question…";
 const MAX_ROWS = 8;
 const LINE_PX = 21;
 
@@ -73,19 +75,24 @@ export function Composer(props: ComposerProps) {
   const [searches, setSearches] = React.useState(settings.cost.maxSearchesPerCall);
   const [pending, setPending] = React.useState(false);
   const ref = React.useRef<HTMLTextAreaElement>(null);
+  const inflight = React.useRef(false);
+  const narrow = useMedia("(max-width: 768px)");
   useAutoGrow(ref, question, docked ? 1 : 3);
 
   const paste = mode === "paste" && !docked;
   const hasPaste = pasted.claude.trim() !== "" || pasted.chatgpt.trim() !== "";
   const ready = question.trim() !== "" && (!paste || hasPaste);
+  const compact = docked && narrow;
   const blocked = disabled || busy || pending;
 
   async function submit() {
-    if (!ready || blocked) return;
+    if (!ready || blocked || inflight.current) return;
+    inflight.current = true;
     setPending(true);
     try {
       await onSubmit(buildInput());
     } finally {
+      inflight.current = false;
       setPending(false);
     }
   }
@@ -126,6 +133,19 @@ export function Composer(props: ComposerProps) {
     </div>
   );
 
+  const sendLabel = "Ask & cross-check";
+  const roundSend = (
+    <Button
+      type="button"
+      aria-label={sendLabel}
+      disabled={!ready || blocked}
+      onClick={() => void submit()}
+      className="size-11 shrink-0 rounded-full p-0"
+    >
+      <ArrowUp aria-hidden="true" className="size-5" />
+    </Button>
+  );
+
   const action = (
     <div className="flex shrink-0 items-center gap-2">
       <span className="hidden items-center gap-1 sm:flex" aria-hidden="true">
@@ -138,11 +158,18 @@ export function Composer(props: ComposerProps) {
         onClick={() => void submit()}
         className="gap-1.5"
       >
-        {disabled && disabledLabel ? disabledLabel : "Ask & cross-check"}
+        {disabled && disabledLabel ? disabledLabel : sendLabel}
         {!(disabled && disabledLabel) && <ArrowUp aria-hidden="true" className="size-3.5" />}
       </Button>
     </div>
   );
+
+  const placeholder =
+    disabled && disabledPlaceholder
+      ? disabledPlaceholder
+      : docked
+        ? DOCKED_PLACEHOLDER
+        : PLACEHOLDER;
 
   const input = (
     <textarea
@@ -151,7 +178,7 @@ export function Composer(props: ComposerProps) {
       rows={docked ? 1 : 3}
       value={question}
       disabled={blocked}
-      placeholder={disabled && disabledPlaceholder ? disabledPlaceholder : PLACEHOLDER}
+      placeholder={placeholder}
       onChange={(e) => setQuestion(e.target.value)}
       onKeyDown={(e) => {
         if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
@@ -161,12 +188,26 @@ export function Composer(props: ComposerProps) {
       }}
       maxLength={8000}
       className={cn(
-        "w-full resize-none bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted",
-        docked ? "min-w-0 flex-1 py-4" : "px-4 pt-4",
+        "w-full resize-none bg-transparent text-base text-text-primary md:text-sm outline-none placeholder:text-text-muted",
+        docked ? "min-w-0 flex-1 py-3 md:py-4" : "px-4 pt-4",
+        compact && "px-4",
       )}
     />
   );
 
+  if (compact) {
+    return (
+      <div
+        data-variant="docked"
+        className="flex items-center gap-2 border-t border-border-default bg-bg-card px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+      >
+        <div className="flex min-h-11 min-w-0 flex-1 items-center rounded-full border border-border-default bg-bg-subtle">
+          {input}
+        </div>
+        {roundSend}
+      </div>
+    );
+  }
   if (docked) {
     return (
       <div

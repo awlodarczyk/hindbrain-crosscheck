@@ -17,7 +17,6 @@ export function Drawer({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: ReactNode;
-  side?: "left";
   title: string;
 }) {
   return (

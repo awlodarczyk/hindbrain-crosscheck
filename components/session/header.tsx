@@ -8,17 +8,23 @@ export function SessionHeader({ session, meta }: { session: Session; meta: strin
   const n = (v: number) => (pending ? null : v);
   return (
     <div className="flex flex-col gap-3">
-      <p suppressHydrationWarning className="font-mono text-[12px] text-text-secondary">
+      <p suppressHydrationWarning className="break-words font-mono text-[12px] text-text-secondary">
         {meta}
       </p>
-      <h1 className="text-2xl font-semibold text-text-primary">
+      <h1 className="text-xl font-semibold md:text-2xl text-text-primary">
         {session.title ?? session.question}
       </h1>
-      <div className="flex flex-wrap gap-2">
-        <StatTile icon={ListChecks} label="Claims checked" value={n(session.stats.claims)} />
+      <div className="flex gap-2">
+        <StatTile
+          icon={ListChecks}
+          label="Claims checked"
+          shortLabel="Claims"
+          value={n(session.stats.claims)}
+        />
         <StatTile
           icon={CircleCheck}
           label="Supported"
+          shortLabel="OK"
           value={n(session.stats.supported)}
           tone="supported"
         />

@@ -13,7 +13,7 @@ export function Topbar({
 }) {
   const last = crumbs.length - 1;
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-border-default px-5">
+    <header className="hidden h-12 shrink-0 items-center justify-between border-b border-border-default px-5 md:flex">
       <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-[13px]">
         {crumbs.map((c, i) => (
           <span key={`${i}-${c.label}`} className="flex min-w-0 items-center gap-2">
@@ -24,6 +24,7 @@ export function Topbar({
             )}
             {i === last ? (
               <span
+                suppressHydrationWarning
                 aria-current="page"
                 className="max-w-[420px] truncate font-medium text-text-primary"
               >
@@ -40,7 +41,9 @@ export function Topbar({
                 {c.label}
               </Link>
             ) : (
-              <span className="text-text-secondary">{c.label}</span>
+              <span suppressHydrationWarning className="text-text-secondary">
+                {c.label}
+              </span>
             )}
           </span>
         ))}

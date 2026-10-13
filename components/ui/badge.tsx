@@ -5,6 +5,7 @@ const tones = {
   supported: "text-status-supported border-status-supported/30 bg-status-supported/10",
   disputed: "text-status-disputed border-status-disputed/30 bg-status-disputed/10",
   unverifiable: "text-status-unverifiable border-status-unverifiable/30 bg-status-unverifiable/10",
+  partial: "text-status-unverifiable border-status-unverifiable/30 bg-status-unverifiable/10",
   running: "text-status-running border-status-running/30 bg-status-running/10",
   neutral: "text-text-secondary border-border-default bg-bg-subtle",
   claude: "text-text-primary border-border-default bg-bg-subtle",
