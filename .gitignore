@@ -12,3 +12,4 @@ designs/**/*.log
 .DS_Store
 tsconfig.tsbuildinfo
 next-env.d.ts
+node-compile-cache/
