@@ -26,14 +26,19 @@ with `docker network create dokploy-network`.
 | `TRUST_PROXY`                                    | yes        | hosted | must be `1` (pinned by compose)                         |
 | `VALKEY_PASSWORD`                                | yes        | hosted | password for bundled Valkey and its URL                 |
 | `VALKEY_URL`                                     | yes        | hosted | built by compose from `VALKEY_PASSWORD`                 |
-| `ADMIN_EMAIL`                                    | yes        | hosted | initial admin account                                   |
-| `ADMIN_PASSWORD`                                 | first boot | hosted | min 12 chars; remove after the admin logs in            |
+| `ADMIN_EMAIL`                                    | first boot | hosted | initial admin account; may be removed after sign-in     |
+| `ADMIN_PASSWORD`                                 | first boot | hosted | min 12 chars; remove after the admin signs in           |
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY`           | no         | all    | provider keys                                           |
 | `CLI_ENABLED`                                    | no         | all    | `0` in containers (pinned)                              |
 | `PROVIDER_TRANSPORT`                             | no         | all    | `auto` or `mock` (smoke tests)                          |
 | `LOG_LEVEL`                                      | no         | all    | `info` in production, `debug` in staging                |
 | `DATA_DIR`                                       | no         | all    | `/data` (the volume)                                    |
 | `PORT`, `SMTP_URL`, `MOCK_DELAY_MS`, `MOCK_FAIL` | no         | all    | see `.env.example`                                      |
+
+Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` for the first deploy, sign in, then remove
+`ADMIN_PASSWORD` (and optionally `ADMIN_EMAIL`) and redeploy. The admin user persists in
+the database. With no users and no admin variables the app logs an error at boot and
+sign-in is impossible.
 
 `APP_SECRET` is not needed to build the image; it is checked at container start.
 

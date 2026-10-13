@@ -15,10 +15,18 @@ describe("parseEnv", () => {
   it("rejects a short APP_SECRET and names the key", () => {
     expect(() => parseEnv({ APP_SECRET: "short" })).toThrow(/APP_SECRET/);
   });
-  it("requires VALKEY_URL, ADMIN_EMAIL, ADMIN_PASSWORD and APP_URL in hosted mode", () => {
-    expect(() => parseEnv({ ...base, APP_MODE: "hosted" })).toThrow(
-      /VALKEY_URL.*ADMIN_EMAIL.*ADMIN_PASSWORD.*APP_URL/s,
-    );
+  it("requires VALKEY_URL and APP_URL in hosted mode", () => {
+    expect(() => parseEnv({ ...base, APP_MODE: "hosted" })).toThrow(/VALKEY_URL.*APP_URL/s);
+  });
+  it("accepts a complete hosted env without admin vars", () => {
+    const e = parseEnv({
+      ...base,
+      APP_MODE: "hosted",
+      TRUST_PROXY: "1",
+      VALKEY_URL: "redis://valkey:6379",
+      APP_URL: "https://crosscheck.example.com",
+    });
+    expect(e.ADMIN_EMAIL).toBeUndefined();
   });
   it("accepts a complete hosted env", () => {
     const e = parseEnv({
@@ -66,11 +74,11 @@ describe("parseEnv", () => {
         ADMIN_PASSWORD: "",
         APP_URL: "",
       }),
-    ).toThrow(/VALKEY_URL.*ADMIN_EMAIL.*ADMIN_PASSWORD.*APP_URL/s);
+    ).toThrow(/VALKEY_URL.*APP_URL/s);
   });
   it("reports hosted requirements alongside other invalid keys", () => {
     expect(() => parseEnv({ APP_SECRET: "short", APP_MODE: "hosted" })).toThrow(
-      /APP_SECRET[\s\S]*VALKEY_URL[\s\S]*ADMIN_EMAIL[\s\S]*ADMIN_PASSWORD[\s\S]*APP_URL/,
+      /APP_SECRET[\s\S]*VALKEY_URL[\s\S]*APP_URL/,
     );
   });
   it("reports an invalid hosted APP_URL exactly once", () => {

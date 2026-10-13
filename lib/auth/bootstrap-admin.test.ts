@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createTestDb } from "@/lib/db/test-db";
 import { listUserEvents } from "@/lib/repos/events";
 import { countUsers, findUserByEmail } from "@/lib/repos/users";
-import { bootstrapAdmin } from "./bootstrap-admin";
+import { adminBootstrapWarning, bootstrapAdmin } from "./bootstrap-admin";
 import { verifyPassword } from "./password";
 
 const admin = { ADMIN_EMAIL: "Admin@Example.test", ADMIN_PASSWORD: "correct-horse-battery" };
@@ -28,5 +28,16 @@ describe("bootstrapAdmin", () => {
       "skipped",
     );
     expect(countUsers(db)).toBe(0);
+  });
+});
+
+describe("adminBootstrapWarning", () => {
+  it("warns only when there are no users and no admin vars", () => {
+    expect(adminBootstrapWarning(0, {})).toMatch(/sign-in is impossible/);
+    expect(adminBootstrapWarning(0, { ADMIN_EMAIL: "a@b.co" })).toMatch(/impossible/);
+    expect(
+      adminBootstrapWarning(0, { ADMIN_EMAIL: "a@b.co", ADMIN_PASSWORD: "x".repeat(12) }),
+    ).toBeNull();
+    expect(adminBootstrapWarning(1, {})).toBeNull();
   });
 });

@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 
-const HOSTED_REQUIRED = ["VALKEY_URL", "ADMIN_EMAIL", "ADMIN_PASSWORD", "APP_URL"] as const;
+const HOSTED_REQUIRED = ["VALKEY_URL", "APP_URL"] as const;
 const TRUST_PROXY_MESSAGE = 'must be "1" in hosted mode (app runs behind a reverse proxy)';
 const HOSTED_MESSAGE = "required when APP_MODE=hosted";
 const TEST_APP_SECRET = "test-secret-32-bytes-minimum-length!!";

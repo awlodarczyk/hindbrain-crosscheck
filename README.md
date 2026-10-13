@@ -15,7 +15,7 @@ Part of the hindbrain family (sibling of hindbrain reflex).
 
 1. **Ask.** Type a question. Claude and ChatGPT answer it in parallel, each with web search.
 2. **Cross-check.** Each answer is split into claims. The other model verifies every claim
-   and marks it as supported, disputed or unverified, with its sources.
+   and marks it as supported, disputed, partial or unverifiable, with its sources.
 3. **Read.** Compare the two answers side by side, expand any claim to see the verdict and
    the links, and come back later from the history sidebar.
 
@@ -63,7 +63,7 @@ claude login
 codex login
 ```
 
-The app detects both binaries on start and shows their status in Settings. CLI calls run
+The app looks for both binaries when the Settings view is built (a found binary is cached for 60 seconds, a miss for 10) and shows their status in Settings and in the first-run panel. CLI calls run
 on your own subscription. Codex with a ChatGPT account rejects the mini models, so on
 `codex-cli` the verification step uses the same model that wrote the answer. CLI providers
 are for local mode only; hosted deployments set `CLI_ENABLED=0`.
@@ -74,7 +74,7 @@ are for local mode only; hosted deployments set `CLI_ENABLED=0`.
 Settings, Models (they are stored encrypted), or set `ANTHROPIC_API_KEY` and
 `OPENAI_API_KEY` in `.env`. If both exist, the environment variable wins. One question
 costs roughly four model calls (two answers plus two verifications), plus web searches;
-Settings shows per-model prices.
+Settings shows an estimated cost range for one question.
 
 ### Package managers
 
@@ -83,7 +83,7 @@ Use pnpm: the lockfile, CI and the Docker image all use it (`packageManager` pin
 they ignore `pnpm-lock.yaml`, so dependency versions can drift from what CI tests.
 Is `pnpm` the best choice? For this repo, yes. Its strict, content-addressed store keeps
 installs fast and prevents undeclared imports, and a single lockfile format means the
-tested tree is the shipped tree. Bun is faster still, but the native modules here
+tested tree is the shipped tree. Bun works for development, but the native modules here
 (`better-sqlite3`, `@node-rs/argon2`) are exercised on Node in CI.
 
 ## Configuration
@@ -101,8 +101,8 @@ An empty value counts as unset. Mode: **local** (single user, no login), **hoste
 | `APP_URL`           | unset    | hosted | Public https URL; required in hosted, used for Origin checks       |
 | `TRUST_PROXY`       | `0`      | both   | `1` trusts the last `x-forwarded-for` hop; must be `1` when hosted |
 | `VALKEY_URL`        | unset    | hosted | Valkey/Redis URL for rate limits; required in hosted               |
-| `ADMIN_EMAIL`       | unset    | hosted | Initial admin account; required in hosted                          |
-| `ADMIN_PASSWORD`    | unset    | hosted | Initial admin password, 12+ characters; required in hosted         |
+| `ADMIN_EMAIL`       | unset    | hosted | Initial admin account; first deploy only                           |
+| `ADMIN_PASSWORD`    | unset    | hosted | Initial admin password, 12+ chars; first deploy only               |
 | `CLI_ENABLED`       | `1`      | both   | `0` disables the Claude Code and Codex CLI providers               |
 | `ANTHROPIC_API_KEY` | unset    | both   | Anthropic key; overrides a key saved in Settings                   |
 | `OPENAI_API_KEY`    | unset    | both   | OpenAI key; overrides a key saved in Settings                      |
@@ -165,9 +165,10 @@ Dokploy's Traefik routes by domain on the external `dokploy-network`.
 6. **Verify** `https://your-domain/api/health`. Migrations run on the first health check,
    so a healthy container is a migrated one.
 
-The environment check requires `ADMIN_PASSWORD` to be present in hosted mode on every
-start, so leave it set. It is only used when the admin email does not exist yet, so a
-changed or reset password is never overwritten by it.
+Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` for the first deploy, sign in, then remove
+`ADMIN_PASSWORD` (and optionally `ADMIN_EMAIL`) and redeploy. The admin user persists in
+the database. If a hosted instance has no users and no admin variables, it logs an error
+at boot and sign-in is impossible until they are set.
 
 **Staging and production.** Create two Dokploy projects with their own environment values
 and their own `crosscheck-data` volumes. Never share a volume or an `APP_SECRET`.
@@ -233,7 +234,7 @@ Details: [docs/API.md](docs/API.md) and [tests/security/README.md](tests/securit
 ## Data & privacy
 
 - Everything is stored in `./data/crosscheck.db` (or `DATA_DIR`), locally or on your volume.
-- Deleting a session keeps it; restore it from Settings, Data.
+- Deleting a session keeps it; list deleted sessions with `GET /api/sessions/deleted` and restore one with `POST /api/sessions/{id}/restore` (a Settings screen for this is in progress).
 - The only traffic that leaves the machine is calls to the provider APIs or CLIs you
   configured, including their web searches.
 - No telemetry, no analytics, no CDN. Fonts are self-hosted.

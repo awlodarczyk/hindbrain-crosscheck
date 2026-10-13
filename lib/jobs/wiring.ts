@@ -1,5 +1,5 @@
 import { getDummyHash } from "@/lib/auth/password";
-import { bootstrapAdmin } from "@/lib/auth/bootstrap-admin";
+import { adminBootstrapWarning, bootstrapAdmin } from "@/lib/auth/bootstrap-admin";
 import { getDb, type Db } from "@/lib/db/client";
 import { PROVIDER_IDS, type ProviderId } from "@/lib/db/enums";
 import { env } from "@/lib/env";
@@ -9,6 +9,7 @@ import { ProviderError } from "@/lib/providers/errors";
 import { createMockProvider } from "@/lib/providers/mock";
 import { createProvider, resolveProviderConfigs } from "@/lib/providers/registry";
 import type { Provider } from "@/lib/providers/types";
+import { countUsers } from "@/lib/repos/users";
 import { getSecret } from "@/lib/repos/secrets";
 import { getSettings } from "@/lib/repos/settings";
 import { deriveKey } from "@/lib/security/crypto";
@@ -77,6 +78,8 @@ export function bootOnce(): void {
     getDummyHash();
     try {
       bootstrapAdmin(getDb(), env);
+      const warning = adminBootstrapWarning(countUsers(getDb()), env);
+      if (warning) log.error({}, warning);
     } catch (e) {
       log.error({ err: e }, "admin bootstrap failed");
     }
