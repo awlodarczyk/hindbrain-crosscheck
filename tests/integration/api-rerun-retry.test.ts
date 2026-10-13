@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { sql } from "drizzle-orm";
 import type { Db } from "@/lib/db/client";
 import { createTestDb } from "@/lib/db/test-db";
 import { resetDepsForTests, setDepsForTests } from "@/lib/http/deps";
@@ -70,6 +71,34 @@ describe("rerun", () => {
     const runs = listRuns(db, id);
     expect(runs).toHaveLength(2);
     expect(runs[1]).toMatchObject({ attempt: 2, reason: "manual" });
+  });
+
+  it("indexes the answers so search finds the session", async () => {
+    const id = await createId({ question: "q" });
+    await runner.drain();
+    expect(searchSessions(db, userId, "recruits").map((h) => h.id)).toEqual([id]);
+  });
+
+  it("re-runs a paste session from its previous pasted answers", async () => {
+    const body = { question: "q", mode: "paste", pasted: { claude: "Alpha.", chatgpt: "Beta." } };
+    const id = await createId(body);
+    await runner.drain();
+    expect((await rerun(req("POST"), idCtx(id))).status).toBe(200);
+    await runner.drain();
+    const runs = listRuns(db, id);
+    expect(runs.map((r) => r.attempt)).toEqual([1, 2]);
+    const second = listCallsForSession(db, id).filter((c) => c.runId === runs[1]!.id);
+    expect(second.filter((c) => c.kind === "answer" && c.pasted)).toHaveLength(2);
+    expect(second.filter((c) => c.kind === "review")).toHaveLength(2);
+  });
+
+  it("409s not_rerunnable for a paste session without pasted answers", async () => {
+    const id = await createId({ question: "q", mode: "paste", pasted: { claude: "Alpha." } });
+    await runner.drain();
+    db.run(sql`update calls set pasted = 0`);
+    const res = await rerun(req("POST"), idCtx(id));
+    expect(res.status).toBe(409);
+    expect(await code(res)).toBe("not_rerunnable");
   });
 
   it("rejects while running", async () => {

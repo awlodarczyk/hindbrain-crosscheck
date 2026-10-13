@@ -6,6 +6,7 @@ import { renderMarkdown } from "@/lib/security/sanitize";
 import { createCall } from "./calls";
 import { replaceClaims } from "./claims";
 import { insertRun } from "./runs";
+import { joinAnswerTexts } from "./search";
 
 /** Atomically inserts one exported session under `userId` with fresh ids; returns the new session id. */
 export function importBundle(db: Db, userId: string, bundle: ImportBundle): string {
@@ -47,8 +48,7 @@ export function importBundle(db: Db, userId: string, bundle: ImportBundle): stri
 /** Concatenated answer texts of an import bundle's latest attempt, for full-text indexing. */
 export function bundleAnswersText(bundle: ImportBundle): string {
   const latest = Math.max(0, ...bundle.runs.map((r) => r.attempt));
-  return bundle.calls
-    .filter((c) => c.attempt === latest && c.kind === "answer" && c.text)
-    .map((c) => c.text)
-    .join("\n\n");
+  return joinAnswerTexts(
+    bundle.calls.filter((c) => c.attempt === latest && c.kind === "answer").map((c) => c.text),
+  );
 }

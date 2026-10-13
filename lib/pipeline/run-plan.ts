@@ -20,6 +20,17 @@ export function loadSession(db: Db, id: string): SessionRow {
   return row;
 }
 
+/** Pasted answers of the session's latest run, by provider. @throws when there are none. */
+export function pastedFromLatestRun(db: Db, sessionId: string): Partial<Record<ProviderId, string>> {
+  const prev = latestRun(db, sessionId);
+  const pasted: Partial<Record<ProviderId, string>> = {};
+  for (const c of prev ? listCalls(db, prev.id) : []) {
+    if (c.kind === "answer" && c.pasted && c.text) pasted[c.provider] = c.text;
+  }
+  if (Object.keys(pasted).length === 0) throw new Error("paste session has no pasted answers");
+  return pasted;
+}
+
 /** New run with one column per provider; in paste mode only providers with a pasted answer run. */
 export function planFresh(
   db: Db,
@@ -27,9 +38,11 @@ export function planFresh(
   opts: Pick<RunOptions, "reason" | "pasted">,
   now?: () => Date,
 ): Prepared {
+  const pasted =
+    opts.pasted ?? (session.mode === "paste" ? pastedFromLatestRun(db, session.id) : undefined);
   const run = createRun(db, session.id, opts.reason, now);
   const plans = PROVIDER_IDS.flatMap((answerer): ColumnPlan[] => {
-    const pastedAnswer = opts.pasted?.[answerer] || undefined;
+    const pastedAnswer = pasted?.[answerer] || undefined;
     if (session.mode === "paste" && pastedAnswer === undefined) return [];
     return [{ answerer, reviewer: other(answerer), pastedAnswer }];
   });

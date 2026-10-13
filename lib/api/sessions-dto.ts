@@ -89,12 +89,3 @@ export function loadBundle(db: Db, userId: string, id: string): SessionDetail | 
     ),
   };
 }
-
-/** Joins the texts of the latest run's answer calls for full-text indexing. */
-export function answersTextOf(bundle: SessionDetail): string {
-  const latest = bundle.runs[bundle.runs.length - 1];
-  return bundle.calls
-    .filter((c) => c.runId === latest?.id && c.kind === "answer" && c.text)
-    .map((c) => c.text)
-    .join("\n\n");
-}

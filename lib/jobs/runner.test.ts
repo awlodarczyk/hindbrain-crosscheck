@@ -132,6 +132,26 @@ describe("runner", () => {
     expect(listRuns(db, sid).map((r) => r.reason)).toEqual(["initial", "disagreement"]);
   });
 
+  it("auto re-runs a paste session on disagreement", async () => {
+    const runner = make({
+      providersFor: providers(0, DISPUTED),
+      settingsFor: () => settings(true),
+    });
+    const sid = createSession(db, {
+      userId: LOCAL_USER_ID,
+      question: "q",
+      mode: "paste",
+      settingsSnapshot: DEFAULT_SETTINGS,
+    }).id;
+    runner.enqueue({ ...job(sid), pasted: { claude: "Alpha.", chatgpt: "Beta." } });
+    await runner.drain();
+    const runs = listRuns(db, sid);
+    expect(runs.map((r) => r.reason)).toEqual(["initial", "disagreement"]);
+    const second = listCallsForSession(db, sid).filter((c) => c.runId === runs[1]!.id);
+    expect(second.filter((c) => c.pasted)).toHaveLength(2);
+    expect(second.filter((c) => c.kind === "review")).toHaveLength(2);
+  });
+
   it("sets failed status even when onError throws", async () => {
     const runner = make({
       onError: () => {

@@ -1,6 +1,8 @@
 import { sql } from "drizzle-orm";
 import type { Db } from "@/lib/db/client";
 import { escapeFtsQuery } from "@/lib/db/fts";
+import { listCalls } from "./calls";
+import { latestRun } from "./runs";
 
 export type SearchHit = { id: string; question: string; snippet: string; createdAt: string };
 
@@ -57,4 +59,20 @@ export function searchSessions(
     createdAt: r.created_at,
     snippet: r.answer_snippet.includes("<mark>") ? r.answer_snippet : r.question_snippet,
   }));
+}
+
+/** Joins non-empty answer texts with blank lines, the form stored in the index. */
+export function joinAnswerTexts(texts: readonly (string | null)[]): string {
+  return texts.filter((t): t is string => !!t).join("\n\n");
+}
+
+/** Answer texts of the session's latest run, joined for full-text indexing. */
+export function answersTextForSession(db: Db, sessionId: string): string {
+  const run = latestRun(db, sessionId);
+  if (!run) return "";
+  return joinAnswerTexts(
+    listCalls(db, run.id)
+      .filter((c) => c.kind === "answer" && c.status === "done")
+      .map((c) => c.text),
+  );
 }

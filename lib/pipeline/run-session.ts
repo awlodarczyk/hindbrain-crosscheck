@@ -2,6 +2,7 @@ import type { Db } from "@/lib/db/client";
 import type { ProviderId, RunReason, SessionStatus } from "@/lib/db/enums";
 import { listCalls } from "@/lib/repos/calls";
 import { finishRun, setRunStatus } from "@/lib/repos/runs";
+import { answersTextForSession, indexSession } from "@/lib/repos/search";
 import { recomputeStats, setSessionStatus } from "@/lib/repos/sessions";
 import { deriveSessionStatus } from "@/lib/repos/stats";
 import type { Provider } from "@/lib/providers/types";
@@ -66,6 +67,15 @@ function finalize(deps: RunDeps, sessionId: string, runId: string): RunOutcome {
   }
 }
 
+/** Refreshes the full-text row so search finds the run's answers; failures are logged only. */
+function reindex(deps: RunDeps, question: string, sessionId: string): void {
+  try {
+    indexSession(deps.db, sessionId, question, answersTextForSession(deps.db, sessionId));
+  } catch (e) {
+    logError("reindex", e);
+  }
+}
+
 /**
  * Runs (or retries part of) a cross-check for a session: both columns in parallel, each answer
  * reviewed by the other provider. Internal: does not check ownership. Emitter errors are logged
@@ -107,6 +117,7 @@ export async function runSession(
   };
   await Promise.allSettled(plans.map((plan) => runColumn(column, plan)));
   const outcome = finalize(deps, sessionId, run.id);
+  reindex(deps, session.question, sessionId);
   emit({ type: "session.done", sessionId, status: outcome.status, disputed: outcome.disputed });
   return outcome;
 }
