@@ -1,4 +1,5 @@
 import type { HistoryItem } from "./group-by-day";
+import type { ReactNode } from "react";
 import { HistoryRow } from "./history-row";
 
 /** Labelled run of history rows for one day bucket. */
@@ -7,11 +8,13 @@ export function HistoryGroup({
   items,
   activeId,
   onNavigate,
+  renderActions,
 }: {
   label: string;
   items: readonly HistoryItem[];
   activeId: string | null;
   onNavigate: (id: string) => void;
+  renderActions?: (item: HistoryItem) => ReactNode;
 }) {
   return (
     <section aria-label={label}>
@@ -25,6 +28,7 @@ export function HistoryGroup({
           active={item.id === activeId}
           href={`/s/${item.id}`}
           onNavigate={onNavigate}
+          actions={renderActions?.(item)}
         />
       ))}
     </section>

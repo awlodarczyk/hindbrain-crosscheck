@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { rowMeta, type HistoryItem } from "./group-by-day";
 
@@ -29,36 +30,42 @@ export function HistoryRow({
   active,
   href,
   onNavigate,
+  actions,
 }: {
   item: HistoryItem;
   active: boolean;
   href: string;
   onNavigate?: (id: string) => void;
+  /** Slot positioned at the row's right edge (e.g. the row menu). */
+  actions?: ReactNode;
 }) {
   return (
-    <Link
-      href={href}
-      aria-current={active ? "page" : undefined}
-      onClick={(e) => {
-        if (!onNavigate || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-        e.preventDefault();
-        onNavigate(item.id);
-      }}
-      className={cn(
-        "grid h-[52px] grid-cols-[8px_1fr] items-center gap-x-3 px-3 transition-colors duration-150",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-default",
-        active ? "bg-bg-selected" : "hover:bg-bg-muted",
-      )}
-    >
-      <span aria-hidden="true" className={cn("size-2 rounded-full", dotClass(item))} />
-      <span className="min-w-0">
-        <span className="block truncate text-[13px] font-medium text-text-primary">
-          {item.question}
+    <div data-history-row={item.id} className="group relative">
+      <Link
+        href={href}
+        aria-current={active ? "page" : undefined}
+        onClick={(e) => {
+          if (!onNavigate || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+          e.preventDefault();
+          onNavigate(item.id);
+        }}
+        className={cn(
+          "grid h-[52px] w-full grid-cols-[8px_1fr] items-center gap-x-3 pl-3 pr-10 transition-colors duration-150",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-default",
+          active ? "bg-bg-selected" : "hover:bg-bg-muted",
+        )}
+      >
+        <span aria-hidden="true" className={cn("size-2 rounded-full", dotClass(item))} />
+        <span className="min-w-0">
+          <span className="block truncate text-[13px] font-medium text-text-primary">
+            {item.question}
+          </span>
+          <span className="block truncate font-mono text-[11px] text-text-muted">
+            {rowMeta(item, formatTime)}
+          </span>
         </span>
-        <span className="block truncate font-mono text-[11px] text-text-muted">
-          {rowMeta(item, formatTime)}
-        </span>
-      </span>
-    </Link>
+      </Link>
+      {actions}
+    </div>
   );
 }

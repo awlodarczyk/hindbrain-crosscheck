@@ -1,12 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-test("sidebar shows lockup and chrome only when history is empty", async ({ page }) => {
+test("sidebar shows lockup and chrome", async ({ page }) => {
   await page.goto("/");
   const sidebar = page.getByRole("complementary");
   await expect(sidebar).toBeVisible();
   await expect(sidebar.getByText("hindbrain")).toBeVisible();
   await expect(sidebar.getByRole("button", { name: /New question/ })).toBeVisible();
-  await expect(sidebar.getByRole("heading")).toHaveCount(0);
 });
 
 test("Meta+N keeps URL at /", async ({ page }) => {

@@ -16,7 +16,7 @@ export default defineConfig({
       url: baseURL,
       reuseExistingServer: !process.env.CI,
       timeout: 120000,
-      env: { APP_SECRET: E2E_SECRET },
+      env: { APP_SECRET: E2E_SECRET, PROVIDER_TRANSPORT: "mock", DATA_DIR: "./data-e2e" },
     },
     {
       command: `node_modules/.bin/next dev -H 127.0.0.1 -p ${HOSTED_PORT}`,

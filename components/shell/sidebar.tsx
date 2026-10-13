@@ -2,6 +2,7 @@
 
 import { ChevronsUpDown, Plus, Search, Settings } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Kbd } from "@/components/ui/kbd";
 import { focusRing } from "@/components/ui/ring";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,8 @@ export type SidebarProps = {
   onNavigate: (id: string) => void;
   statusLine: { mode: "local" | "hosted"; host: string; keys: boolean };
   now?: Date;
+  /** Rendered at the right edge of each history row (e.g. a row menu). */
+  renderRowActions?: (item: HistoryItem) => ReactNode;
 };
 
 const rowBase = cn(
@@ -34,6 +37,7 @@ export function Sidebar({
   onNavigate,
   statusLine,
   now = new Date(),
+  renderRowActions,
 }: SidebarProps) {
   return (
     <aside className="flex h-full w-[264px] flex-col border-r border-border-default bg-bg-subtle">
@@ -73,6 +77,7 @@ export function Sidebar({
             items={g.items}
             activeId={activeId}
             onNavigate={onNavigate}
+            renderActions={renderRowActions}
           />
         ))}
       </nav>
