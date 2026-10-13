@@ -54,4 +54,14 @@ describe("RowMenu", () => {
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
     await waitFor(() => expect(onDelete).toHaveBeenCalledWith("s1"));
   });
+
+  it("keeps the confirm dialog open when delete fails", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const onDelete = vi.fn().mockRejectedValue(new Error("nope"));
+    render(<RowMenu item={item} onRename={vi.fn()} onDelete={onDelete} />);
+    await openMenu("Delete");
+    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+    await waitFor(() => expect(onDelete).toHaveBeenCalled());
+    expect(screen.getByText("Delete this session?")).toBeInTheDocument();
+  });
 });

@@ -44,6 +44,8 @@ export function ConfirmDialog({
     try {
       await onConfirm();
       onOpenChange(false);
+    } catch (e) {
+      console.warn("confirm action failed; dialog stays open", e);
     } finally {
       setPending(false);
     }

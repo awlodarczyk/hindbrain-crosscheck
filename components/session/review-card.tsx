@@ -38,11 +38,8 @@ export function ReviewCard({
           <CallPlaceholder
             call={call}
             provider={reviewer}
-            waitingFor={
-              done
-                ? "No claims extracted."
-                : `Starts when ${PROVIDER_LABEL[target]}'s answer lands.`
-            }
+            kind="review"
+            waitingFor={done ? "No claims extracted." : undefined}
             onRetry={onRetry}
           />
         </div>

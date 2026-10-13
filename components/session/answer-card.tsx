@@ -27,7 +27,11 @@ export function AnswerCard({
       sub={call?.model}
       right={call ? callMeta(call) : undefined}
       footer={
-        done && cites.length > 0 ? (
+        call?.status === "running" ? (
+          <footer className="flex min-h-10 items-center border-t border-border-default bg-bg-subtle px-4 py-2 text-[12px] text-text-muted">
+            Sources appear when the answer lands
+          </footer>
+        ) : done && cites.length > 0 ? (
           <footer className="flex min-h-10 flex-wrap items-center gap-2 border-t border-border-default bg-bg-subtle px-4 py-2">
             <span className="text-[12px] text-text-muted">Sources</span>
             {cites.map((c) => (
@@ -51,7 +55,7 @@ export function AnswerCard({
         {done ? (
           <HtmlBody html={call.html ?? ""} />
         ) : (
-          <CallPlaceholder call={call} provider={provider} onRetry={onRetry} />
+          <CallPlaceholder call={call} provider={provider} kind="answer" onRetry={onRetry} />
         )}
       </div>
     </CardFrame>

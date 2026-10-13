@@ -1,10 +1,11 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { HistoryItem } from "./group-by-day";
 import { Drawer } from "./drawer";
 import { MobileTopbar } from "./mobile-topbar";
+import { SessionListContext } from "./session-list-context";
 import { RowMenu } from "./row-menu";
 import { SearchPalette } from "./search-palette";
 import { Sidebar, type SidebarProps } from "./sidebar";
@@ -30,7 +31,8 @@ export function AppShell({ children, initialItems, statusLine }: AppShellProps) 
   const [searching, setSearching] = useState(false);
   const [now] = useState(() => new Date());
   const list = useSessionList(initialItems);
-  const { items, refresh } = list;
+  const { items, refresh, upsert } = list;
+  const actions = useMemo(() => ({ upsert, refresh }), [upsert, refresh]);
   const activeId = activeIdOf(pathname);
 
   useEffect(() => {
@@ -59,8 +61,8 @@ export function AppShell({ children, initialItems, statusLine }: AppShellProps) 
   });
 
   const onDelete = async (id: string) => {
-    const deleted = await list.del(id);
-    if (deleted && id === activeId) router.push("/");
+    if (!(await list.del(id))) throw new Error("Delete failed");
+    if (id === activeId) router.push("/");
   };
 
   const sidebar = (afterAction: () => void) => (
@@ -89,23 +91,21 @@ export function AppShell({ children, initialItems, statusLine }: AppShellProps) 
   const palette = (
     <SearchPalette open={searching} onOpenChange={setSearching} onSelect={(id) => onNavigate(id)} />
   );
-  if (isMobile) {
-    return (
-      <div className="flex h-dvh flex-col bg-bg-page">
-        <MobileTopbar title="hindbrain crosscheck" onMenu={() => setOpen(true)} />
-        <Drawer open={open} onOpenChange={setOpen} title="Navigation">
-          {sidebar(() => setOpen(false))}
-        </Drawer>
-        <main className="min-w-0 flex-1 overflow-y-auto text-base">{children}</main>
-        {palette}
-      </div>
-    );
-  }
-  return (
+  const frame = isMobile ? (
+    <div className="flex h-dvh flex-col bg-bg-page">
+      <MobileTopbar title="hindbrain crosscheck" onMenu={() => setOpen(true)} />
+      <Drawer open={open} onOpenChange={setOpen} title="Navigation">
+        {sidebar(() => setOpen(false))}
+      </Drawer>
+      <main className="min-w-0 flex-1 overflow-y-auto text-base">{children}</main>
+      {palette}
+    </div>
+  ) : (
     <div className="grid h-dvh grid-cols-[264px_1fr] bg-bg-page">
       {sidebar(() => {})}
       <main className="min-w-0 overflow-y-auto text-sm">{children}</main>
       {palette}
     </div>
   );
+  return <SessionListContext.Provider value={actions}>{frame}</SessionListContext.Provider>;
 }

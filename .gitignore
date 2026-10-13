@@ -16,5 +16,6 @@ node-compile-cache/
 tests/visual/actual/
 data-e2e/
 data-e2e-hosted/
+data-e2e-live/
 .next-hosted/
 .next-*/

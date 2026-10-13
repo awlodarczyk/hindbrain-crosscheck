@@ -1,8 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { toast } from "sonner";
+import { toHistoryItem } from "@/components/shell/history-item";
+import { useSessionListActions } from "@/components/shell/session-list-context";
 import { Topbar } from "@/components/shell/topbar";
 import { Kbd } from "@/components/ui/kbd";
 import { api } from "@/lib/api/client";
@@ -14,7 +16,7 @@ import { metaLine } from "./meta-line";
 import { selectLatest } from "./select-bundle";
 import { SessionActions } from "./session-actions";
 import { SessionTabs } from "./tabs";
-import { useSessionPoll } from "./use-session-poll";
+import { useSessionEvents } from "./use-session-events";
 
 export type SessionViewProps = {
   initial: SessionDetail;
@@ -34,27 +36,33 @@ function dayLabel(iso: string): string {
 /** The session screen: header, tabs, actions and the docked composer. */
 export function SessionView({ initial, settings, models }: SessionViewProps) {
   const router = useRouter();
-  const [detail, setDetail] = useState(initial);
-  const { polling, start } = useSessionPoll(initial.session.id, setDetail);
+  const { upsert } = useSessionListActions();
+  const { detail, setDetail, reconnect } = useSessionEvents(initial.session.id, initial);
   const view = useMemo(() => selectLatest(detail), [detail]);
   const { session } = detail;
-  const busy = polling || session.status === "queued" || session.status === "running";
+  const busy = session.status === "queued" || session.status === "running";
+
+  useEffect(() => {
+    upsert(toHistoryItem(session));
+  }, [session, upsert]);
 
   const rerun = useCallback(async () => {
     await api.sessions.rerun(session.id);
-    start(detail.runs.length + 1);
-  }, [session.id, detail.runs.length, start]);
+    setDetail({ ...detail, session: { ...session, status: "queued" } });
+    reconnect();
+  }, [session, detail, setDetail, reconnect]);
 
   const retry = useCallback(
     async (callId: string) => {
       try {
         await api.sessions.retry(session.id, callId);
-        start(detail.runs.length);
+        setDetail({ ...detail, session: { ...session, status: "running" } });
+        reconnect();
       } catch (e) {
         toast.error(errorMessage(e));
       }
     },
-    [session.id, detail.runs.length, start],
+    [session, detail, setDetail, reconnect],
   );
 
   async function ask(input: ComposerSubmit) {
@@ -95,7 +103,8 @@ export function SessionView({ initial, settings, models }: SessionViewProps) {
           settings={settings}
           models={models}
           disabled={busy}
-          disabledLabel="Wait for this run to finish"
+          disabledLabel="Running…"
+          disabledPlaceholder="Running… you can ask a new question when this one finishes"
           onSubmit={ask}
         />
       </div>

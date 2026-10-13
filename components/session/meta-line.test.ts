@@ -20,7 +20,8 @@ describe("callMeta", () => {
     expect(callMeta(makeCall({ searches: 0, durationMs: 3000 }))).toBe("3.0 s");
   });
   it("covers states", () => {
-    expect(callMeta(makeCall({ status: "running" }))).toBe("running");
+    expect(callMeta(makeCall({ status: "running", searches: 0 }))).toBe("running");
+    expect(callMeta(makeCall({ status: "running", searches: 2 }))).toBe("running · 2 searches");
     expect(callMeta(makeCall({ status: "queued" }))).toBe("queued");
     expect(callMeta(makeCall({ status: "failed" }))).toBe("failed");
     expect(callMeta(makeCall({ pasted: true }))).toBe("pasted");
@@ -32,5 +33,18 @@ describe("domainOf", () => {
     expect(domainOf("https://www.nasa.gov/a?b")).toBe("nasa.gov");
     expect(domainOf("https://esa.int")).toBe("esa.int");
     expect(domainOf("not a url")).toBe("not a url");
+  });
+});
+
+describe("metaLine while running", () => {
+  it("shows progress", () => {
+    const detail = makeDetail();
+    const session = {
+      ...detail.session,
+      status: "running" as const,
+      stats: { ...detail.session.stats, calls: 4, callsDone: 1 },
+    };
+    const line = metaLine(session, selectLatest({ ...detail, session }), "en-GB", "UTC");
+    expect(line).toMatch(/^Running · started \d\d:\d\d · .* · 1 of 4 calls done$/);
   });
 });

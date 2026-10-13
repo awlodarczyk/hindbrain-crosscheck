@@ -48,7 +48,10 @@ export function SearchPalette({ open, onOpenChange, onSelect }: SearchPalettePro
       api
         .search(q)
         .then((hits) => !stale && setState({ status: "done", hits }))
-        .catch(() => !stale && setState({ status: "error", hits: [] }));
+        .catch((e: unknown) => {
+          console.warn("session search failed", e);
+          if (!stale) setState({ status: "error", hits: [] });
+        });
     }, DEBOUNCE_MS);
     return () => {
       stale = true;

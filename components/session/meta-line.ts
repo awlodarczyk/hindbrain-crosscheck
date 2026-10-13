@@ -39,6 +39,17 @@ function formatWhen(iso: string, locale: string | undefined, timeZone: string | 
   return `${date} · ${time}`;
 }
 
+function runningMeta(session: Session, view: LatestView, locale?: string, timeZone?: string) {
+  const time = formatWhen(session.createdAt, locale, timeZone).split(" · ").at(-1);
+  const models = [view.answers.claude?.model, view.answers.chatgpt?.model]
+    .filter(Boolean)
+    .join(" vs ");
+  const { callsDone, calls } = session.stats;
+  return ["Running", `started ${time}`, models, `${callsDone} of ${calls || 4} calls done`]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 /** "12 Oct 2026 · 14:32 · modelA vs modelB · 4 calls · 7 searches · 48 s". */
 export function metaLine(
   session: Session,
@@ -47,6 +58,9 @@ export function metaLine(
   timeZone?: string,
 ): string {
   const calls = viewCalls(view);
+  if (session.status === "queued" || session.status === "running") {
+    return runningMeta(session, view, locale, timeZone);
+  }
   const models = [view.answers.claude?.model, view.answers.chatgpt?.model]
     .filter(Boolean)
     .join(" vs ");
@@ -69,6 +83,8 @@ export function metaLine(
 /** Short per-card status: "12.4 s · 1 search", "running", "failed", "pasted". */
 export function callMeta(call: Call): string {
   if (call.pasted) return "pasted";
+  if (call.status === "running" && call.searches > 0)
+    return `running · ${plural(call.searches, "search", "searches")}`;
   if (call.status !== "done") return call.status === "skipped" ? "skipped" : call.status;
   const parts = [call.durationMs === null ? null : `${(call.durationMs / 1000).toFixed(1)} s`];
   if (call.searches > 0) parts.push(plural(call.searches, "search", "searches"));

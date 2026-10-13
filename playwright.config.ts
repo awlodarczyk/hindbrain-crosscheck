@@ -3,9 +3,12 @@ import { defineConfig, devices } from "@playwright/test";
 const PORT = 4173;
 const HOSTED_PORT = 4174;
 const baseURL = `http://127.0.0.1:${PORT}`;
+const LIVE_PORT = 4273;
+const liveURL = `http://127.0.0.1:${LIVE_PORT}`;
 const hostedURL = `http://127.0.0.1:${HOSTED_PORT}`;
 const E2E_SECRET = "e2e-secret-at-least-32-characters-long";
 const HOSTED_SPEC = /hosted-.*\.spec\.ts/;
+const LIVE_SPEC = /live\.spec\.ts/;
 
 export default defineConfig({
   testDir: "tests/e2e",
@@ -17,6 +20,20 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 120000,
       env: { APP_SECRET: E2E_SECRET, PROVIDER_TRANSPORT: "mock", DATA_DIR: "./data-e2e" },
+    },
+    {
+      command: `node_modules/.bin/next dev -H 127.0.0.1 -p ${LIVE_PORT}`,
+      url: liveURL,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
+      env: {
+        APP_SECRET: E2E_SECRET,
+        PROVIDER_TRANSPORT: "mock",
+        DATA_DIR: "./data-e2e-live",
+        NEXT_DIST_DIR: ".next-live",
+        MOCK_DELAY_MS: "1500",
+        MOCK_FAIL: "chatgpt",
+      },
     },
     {
       command: `node_modules/.bin/next dev -H 127.0.0.1 -p ${HOSTED_PORT}`,
@@ -41,7 +58,7 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: [/mobile\.spec\.ts/, HOSTED_SPEC],
+      testIgnore: [/mobile\.spec\.ts/, HOSTED_SPEC, LIVE_SPEC],
     },
     {
       name: "mobile",
@@ -51,6 +68,15 @@ export default defineConfig({
         viewport: { width: 390, height: 844 },
       },
       testMatch: /mobile\.spec\.ts/,
+    },
+    {
+      name: "live",
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: liveURL,
+        extraHTTPHeaders: { origin: liveURL },
+      },
+      testMatch: LIVE_SPEC,
     },
     {
       name: "hosted",

@@ -28,6 +28,8 @@ export type ComposerProps = {
   models: SettingsView["models"];
   disabled?: boolean;
   disabledLabel?: string;
+  /** Textarea placeholder shown while `disabled`. */
+  disabledPlaceholder?: string;
   busy?: boolean;
   mode?: "ask" | "paste";
   onSubmit: (input: ComposerSubmit) => Promise<void>;
@@ -59,6 +61,7 @@ export function Composer(props: ComposerProps) {
     models,
     disabled,
     disabledLabel,
+    disabledPlaceholder,
     busy,
     mode = "ask",
     onSubmit,
@@ -148,7 +151,7 @@ export function Composer(props: ComposerProps) {
       rows={docked ? 1 : 3}
       value={question}
       disabled={blocked}
-      placeholder={PLACEHOLDER}
+      placeholder={disabled && disabledPlaceholder ? disabledPlaceholder : PLACEHOLDER}
       onChange={(e) => setQuestion(e.target.value)}
       onKeyDown={(e) => {
         if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {

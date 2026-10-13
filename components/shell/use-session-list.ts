@@ -27,8 +27,8 @@ export function useSessionList(initial: readonly HistoryItem[]) {
   const refresh = useCallback(async () => {
     try {
       apply((await api.sessions.list({ limit: LIST_LIMIT })).items);
-    } catch {
-      // Keep the stale list; the next refresh retries.
+    } catch (e) {
+      console.warn("history refresh failed; keeping the stale list", e);
     }
   }, [apply]);
 
