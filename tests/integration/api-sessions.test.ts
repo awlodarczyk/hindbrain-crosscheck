@@ -91,7 +91,9 @@ describe("sessions api", () => {
     const all = await ids("");
     expect(all.map((i) => i.id)).toEqual([b, a]);
     expect(
-      (await ids(`?before=${encodeURIComponent(all[0]!.createdAt)}`)).map((i) => i.id),
+      (await ids(`?before=${encodeURIComponent(`${all[0]!.createdAt}|${all[0]!.id}`)}`)).map(
+        (i) => i.id,
+      ),
     ).toEqual([a]);
   });
 

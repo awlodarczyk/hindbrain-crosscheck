@@ -34,6 +34,13 @@ describe("ListQuery / RenameBody", () => {
     expect(ListQuery.parse({ limit: "10" }).limit).toBe(10);
     expect(ListQuery.safeParse({ limit: "101" }).success).toBe(false);
   });
+  it("parses the compound before cursor", () => {
+    expect(ListQuery.parse({ before: "2026-01-01T00:00:00.000Z|abc" }).before).toEqual({
+      createdAt: "2026-01-01T00:00:00.000Z",
+      id: "abc",
+    });
+    expect(ListQuery.safeParse({ before: "2026-01-01T00:00:00.000Z" }).success).toBe(false);
+  });
   it("trims title", () => {
     expect(RenameBody.parse({ title: " a " }).title).toBe("a");
   });

@@ -1,7 +1,8 @@
 "use client";
 
-import { Copy, Download } from "lucide-react";
+import { Copy, Download, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useRef } from "react";
 import { toast } from "sonner";
 import { useSessionListActions } from "@/components/shell/session-list-context";
 import { Button } from "@/components/ui/button";
@@ -178,6 +179,18 @@ export function DataSection() {
     void refresh();
     router.refresh();
   };
+  const fileInput = useRef<HTMLInputElement>(null);
+  const importFile = async (file: File) => {
+    try {
+      const { imported, warnings } = await api.sessions.importFile(file);
+      const extra = warnings.length > 0 ? ` (${warnings.length} warnings)` : "";
+      toast.success(`Imported ${imported} ${imported === 1 ? "session" : "sessions"}${extra}`);
+      void refresh();
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not import the file");
+    }
+  };
   return (
     <Section title="Data">
       <Row title="History" sub={dbPath ?? "Stored on the server"} monoSub={dbPath !== null}>
@@ -188,6 +201,22 @@ export function DataSection() {
               Copy path
             </Button>
           )}
+          <input
+            ref={fileInput}
+            type="file"
+            accept="application/json"
+            hidden
+            aria-label="Import JSON file"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) void importFile(file);
+            }}
+          />
+          <Button variant="secondary" onClick={() => fileInput.current?.click()}>
+            <Upload className="size-4" />
+            Import JSON
+          </Button>
           <Button variant="secondary" asChild>
             <a href={api.sessions.exportAllUrl()} download>
               <Download className="size-4" />

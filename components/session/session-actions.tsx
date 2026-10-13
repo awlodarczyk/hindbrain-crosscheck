@@ -42,13 +42,19 @@ function useSessionActions({ detail, onRerun }: ActionProps) {
     }
   }
 
-  return { rerun, copy, exportUrl: api.sessions.exportUrl(detail.session.id, "json") };
+  const id = detail.session.id;
+  return {
+    rerun,
+    copy,
+    jsonUrl: api.sessions.exportUrl(id, "json"),
+    mdUrl: api.sessions.exportUrl(id, "md"),
+  };
 }
 
-/** Re-run, Copy report and Export JSON buttons for the topbar. */
+/** Re-run, Copy report and export buttons for the topbar. */
 export function SessionActions(props: ActionProps) {
   const { busy } = props;
-  const { rerun, copy, exportUrl } = useSessionActions(props);
+  const { rerun, copy, jsonUrl, mdUrl } = useSessionActions(props);
   return (
     <div className={`flex items-center gap-2 ${busy ? "opacity-50" : ""}`}>
       <Button variant="secondary" size="sm" disabled={busy} onClick={() => void rerun()}>
@@ -60,9 +66,15 @@ export function SessionActions(props: ActionProps) {
         Copy report
       </Button>
       <Button variant="secondary" size="sm" asChild>
-        <a href={exportUrl} download>
+        <a href={jsonUrl} download>
           <Download aria-hidden className="size-3.5" />
           Export JSON
+        </a>
+      </Button>
+      <Button variant="secondary" size="sm" asChild>
+        <a href={mdUrl} download>
+          <Download aria-hidden className="size-3.5" />
+          Export Markdown
         </a>
       </Button>
     </div>
@@ -72,7 +84,7 @@ export function SessionActions(props: ActionProps) {
 /** The same actions behind a single 44 px "more" button for the mobile top bar. */
 export function SessionMenu(props: ActionProps) {
   const { busy } = props;
-  const { rerun, copy, exportUrl } = useSessionActions(props);
+  const { rerun, copy, jsonUrl, mdUrl } = useSessionActions(props);
   const item = "h-11 text-base";
   return (
     <DropdownMenu>
@@ -95,9 +107,15 @@ export function SessionMenu(props: ActionProps) {
           Copy report
         </DropdownMenuItem>
         <DropdownMenuItem className={item} asChild>
-          <a href={exportUrl} download>
+          <a href={jsonUrl} download>
             <Download aria-hidden className="size-4" />
             Export JSON
+          </a>
+        </DropdownMenuItem>
+        <DropdownMenuItem className={item} asChild>
+          <a href={mdUrl} download>
+            <Download aria-hidden className="size-4" />
+            Export Markdown
           </a>
         </DropdownMenuItem>
       </DropdownMenuContent>

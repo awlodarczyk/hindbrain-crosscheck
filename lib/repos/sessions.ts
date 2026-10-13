@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, isNull, lt } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, lt, or } from "drizzle-orm";
 import { ulid } from "ulid";
 import { z } from "zod";
 import type { SessionMode, SessionStatus } from "@/lib/db/enums";
@@ -90,11 +90,13 @@ export function getSession(db: Db, userId: string, id: string): Session | null {
   return row ? toSession(row) : null;
 }
 
-/** Newest first; `before` is an exclusive createdAt cursor. */
+export type ListCursor = { createdAt: string; id: string };
+
+/** Newest first, ordered by (createdAt, id); `before` is an exclusive keyset cursor. */
 export function listSessions(
   db: Db,
   userId: string,
-  opts: { limit: number; before?: string },
+  opts: { limit: number; before?: ListCursor },
 ): readonly Session[] {
   const rows = db
     .select()
@@ -103,10 +105,15 @@ export function listSessions(
       and(
         eq(sessions.userId, userId),
         isNull(sessions.deletedAt),
-        opts.before ? lt(sessions.createdAt, opts.before) : undefined,
+        opts.before
+          ? or(
+              lt(sessions.createdAt, opts.before.createdAt),
+              and(eq(sessions.createdAt, opts.before.createdAt), lt(sessions.id, opts.before.id)),
+            )
+          : undefined,
       ),
     )
-    .orderBy(desc(sessions.createdAt))
+    .orderBy(desc(sessions.createdAt), desc(sessions.id))
     .limit(opts.limit)
     .all();
   return Object.freeze(rows.map(toSession));

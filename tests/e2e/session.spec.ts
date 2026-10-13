@@ -62,6 +62,14 @@ test("export JSON downloads a .json file", async ({ page, baseURL }) => {
   expect((await download).suggestedFilename()).toMatch(/\.json$/);
 });
 
+test("export Markdown downloads a .md file", async ({ page, baseURL }) => {
+  const id = await settledSession(page, baseURL!);
+  await page.goto(`/s/${id}`);
+  const download = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Export Markdown" }).click();
+  expect((await download).suggestedFilename()).toBe(`crosscheck-${id}.md`);
+});
+
 test("unknown session id renders 404", async ({ page }) => {
   const res = await page.goto("/s/unknown");
   expect(res?.status()).toBe(404);

@@ -47,9 +47,25 @@ describe("sessions repo", () => {
     softDeleteSession(db, "u1", d!.id, at(9));
     const all = listSessions(db, "u1", { limit: 10 });
     expect(all.map((s) => s.id)).toEqual([c!.id, b!.id, a!.id]);
-    const page = listSessions(db, "u1", { limit: 10, before: c!.createdAt });
+    const page = listSessions(db, "u1", {
+      limit: 10,
+      before: { createdAt: c!.createdAt, id: c!.id },
+    });
     expect(page.map((s) => s.id)).toEqual([b!.id, a!.id]);
     expect(listSessions(db, "u1", { limit: 1 })).toHaveLength(1);
+  });
+
+  it("pages sessions with identical createdAt without loss", () => {
+    const [x, y] = [
+      mk("u1", 1),
+      createSession(db, { userId: "u1", question: "q", mode: "ask", settingsSnapshot: {} }, at(1)),
+    ];
+    const first = listSessions(db, "u1", { limit: 1 });
+    const second = listSessions(db, "u1", {
+      limit: 1,
+      before: { createdAt: first[0]!.createdAt, id: first[0]!.id },
+    });
+    expect([...first, ...second].map((s) => s.id).sort()).toEqual([x!.id, y!.id].sort());
   });
 
   it("renames immutably", () => {

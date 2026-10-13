@@ -43,9 +43,18 @@ const CreateSessionSchema = z
 export type CreateSessionInput = z.output<typeof CreateSessionSchema>;
 export const CreateSessionBody = CreateSessionSchema;
 
+/** Wire form of the list cursor: `<createdAt>|<id>`. */
+const BeforeSchema = z
+  .string()
+  .regex(/^[^|]+\|[^|]+$/, "before must be <createdAt>|<id>")
+  .transform((v) => {
+    const [createdAt = "", id = ""] = v.split("|");
+    return { createdAt, id };
+  });
+
 const ListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
-  before: z.string().optional(),
+  before: BeforeSchema.optional(),
 });
 
 export type ListQueryInput = z.output<typeof ListQuerySchema>;
