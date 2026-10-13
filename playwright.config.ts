@@ -12,5 +12,16 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] }, testIgnore: /mobile\.spec\.ts/ },
+    {
+      name: "mobile",
+      use: {
+        ...devices["iPhone 13"],
+        defaultBrowserType: "chromium",
+        viewport: { width: 390, height: 844 },
+      },
+      testMatch: /mobile\.spec\.ts/,
+    },
+  ],
 });
