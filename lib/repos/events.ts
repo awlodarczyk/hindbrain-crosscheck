@@ -1,6 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import { ulid } from "ulid";
 import type { Db } from "@/lib/db/client";
+import { deepFreeze } from "@/lib/settings/freeze";
 import { events } from "@/lib/db/schema-sessions";
 
 export type AppEvent = {
@@ -14,8 +15,16 @@ export type AppEvent = {
 
 type Row = typeof events.$inferSelect;
 
+function parsePayload(raw: string): unknown {
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return null;
+  }
+}
+
 function toEvent(row: Row): AppEvent {
-  return Object.freeze({ ...row, payload: JSON.parse(row.payload) as unknown });
+  return deepFreeze({ ...row, payload: parsePayload(row.payload) });
 }
 
 const freezeAll = (rows: Row[]): readonly AppEvent[] => Object.freeze(rows.map(toEvent));

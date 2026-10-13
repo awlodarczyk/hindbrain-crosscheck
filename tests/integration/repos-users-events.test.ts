@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createTestDb } from "@/lib/db/test-db";
 import type { Db } from "@/lib/db/client";
@@ -11,12 +12,13 @@ import {
   touchLogin,
   updatePasswordHash,
 } from "@/lib/repos/users";
+import { sessions } from "@/lib/db/schema-sessions";
+import { events } from "@/lib/db/schema-sessions";
 import { appendEvent, listEvents, listUserEvents } from "@/lib/repos/events";
 
 let db: Db;
 beforeEach(() => {
   db = createTestDb();
-  db.$client.pragma("foreign_keys = OFF");
 });
 
 describe("users repo", () => {
@@ -49,23 +51,59 @@ describe("users repo", () => {
 });
 
 describe("events repo", () => {
+  const seedSession = (id: string): void => {
+    db.insert(sessions)
+      .values({
+        id,
+        userId: LOCAL_USER_ID,
+        question: "q",
+        mode: "ask",
+        status: "queued",
+        settingsSnapshot: "{}",
+        createdAt: "t",
+        updatedAt: "t",
+      })
+      .run();
+  };
+  beforeEach(() => {
+    ensureLocalUser(db);
+    seedSession("s1");
+  });
+  const u = LOCAL_USER_ID;
+  const at = (s: string) => () => new Date(s);
+
   it("lists by session in ts order and filters user events by type", () => {
-    const at = (s: string) => () => new Date(s);
     appendEvent(
       db,
-      { sessionId: "s1", userId: "u", type: "b", payload: { n: 2 } },
+      { sessionId: "s1", userId: u, type: "b", payload: { n: 2 } },
       at("2026-01-02T00:00:00Z"),
     );
-    appendEvent(db, { sessionId: "s1", userId: "u", type: "a" }, at("2026-01-01T00:00:00Z"));
+    appendEvent(db, { sessionId: "s1", userId: u, type: "a" }, at("2026-01-01T00:00:00Z"));
     appendEvent(
       db,
-      { sessionId: null, userId: "u", type: "a", payload: 1 },
+      { sessionId: null, userId: u, type: "a", payload: 1 },
       at("2026-01-03T00:00:00Z"),
     );
     const list = listEvents(db, "s1");
     expect(list.map((e) => e.type)).toEqual(["a", "b"]);
     expect(list[1]?.payload).toEqual({ n: 2 });
-    expect(listUserEvents(db, "u", "a")).toHaveLength(2);
     expect(Object.isFrozen(list)).toBe(true);
+    expect(Object.isFrozen(list[1]?.payload)).toBe(true);
+    expect(listUserEvents(db, u, "a")).toHaveLength(2);
+  });
+  it("rejects a nonexistent session", () => {
+    expect(() => appendEvent(db, { sessionId: "nope", userId: u, type: "a" })).toThrow();
+  });
+  it("nulls session_id when the session is deleted", () => {
+    const e = appendEvent(db, { sessionId: "s1", userId: u, type: "a" });
+    db.delete(sessions).where(eq(sessions.id, "s1")).run();
+    expect(listUserEvents(db, u, "a")[0]?.sessionId).toBeNull();
+    expect(listUserEvents(db, u, "a")[0]?.id).toBe(e.id);
+  });
+  it("returns null payload for corrupt json", () => {
+    db.insert(events)
+      .values({ id: "e1", sessionId: null, userId: u, ts: "t", type: "x", payload: "{bad" })
+      .run();
+    expect(listUserEvents(db, u, "x")[0]?.payload).toBeNull();
   });
 });

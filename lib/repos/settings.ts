@@ -2,16 +2,9 @@ import { eq } from "drizzle-orm";
 import type { Db } from "@/lib/db/client";
 import { settings } from "@/lib/db/schema-auth";
 import { DEFAULT_SETTINGS } from "@/lib/settings/defaults";
+import { deepFreeze } from "@/lib/settings/freeze";
 import { mergeSettings } from "@/lib/settings/merge";
 import { SettingsSchema, type Settings } from "@/lib/settings/schema";
-
-function freeze<T>(v: T): T {
-  if (v !== null && typeof v === "object") {
-    Object.values(v).forEach(freeze);
-    Object.freeze(v);
-  }
-  return v;
-}
 
 function parseJson(raw: string): unknown {
   try {
@@ -28,7 +21,7 @@ export function getSettingsWithWarnings(
   const row = db.select().from(settings).where(eq(settings.userId, userId)).get();
   if (!row) return { settings: DEFAULT_SETTINGS, warnings: [], updatedAt: null };
   const merged = mergeSettings(DEFAULT_SETTINGS, parseJson(row.json));
-  return { settings: freeze(merged.settings), warnings: merged.warnings, updatedAt: row.updatedAt };
+  return { settings: merged.settings, warnings: merged.warnings, updatedAt: row.updatedAt };
 }
 
 export function getSettings(db: Db, userId: string): Settings {
@@ -48,5 +41,5 @@ export function putSettings(
     .values({ userId, ...values })
     .onConflictDoUpdate({ target: settings.userId, set: values })
     .run();
-  return freeze(valid);
+  return deepFreeze(valid);
 }

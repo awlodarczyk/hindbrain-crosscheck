@@ -40,4 +40,28 @@ describe("mergeSettings", () => {
     const { warnings } = mergeSettings(DEFAULT_SETTINGS, { tuning: { temperature: 9 } });
     expect(warnings.join()).toContain("tuning.temperature");
   });
+  it("returns a deep-frozen result", () => {
+    const { settings } = mergeSettings(DEFAULT_SETTINGS, { tuning: { temperature: 0.5 } });
+    expect(Object.isFrozen(settings)).toBe(true);
+    expect(Object.isFrozen(settings.tuning)).toBe(true);
+    expect(Object.isFrozen(settings.tuning.preferredDomains)).toBe(true);
+  });
+  it("ignores prototype-pollution keys", () => {
+    const evil = JSON.parse(
+      '{"__proto__":{"polluted":true},"tuning":{"__proto__":{"polluted":true}}}',
+    );
+    const { settings, warnings } = mergeSettings(DEFAULT_SETTINGS, evil);
+    expect(warnings).toEqual([]);
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    expect((settings as Record<string, unknown>).polluted).toBeUndefined();
+    expect((settings.tuning as Record<string, unknown>).polluted).toBeUndefined();
+  });
+  it("does not mutate inputs", () => {
+    const input = { tuning: { temperature: 0.5, preferredDomains: ["a.com"] } };
+    const before = structuredClone(input);
+    const defaultsBefore = structuredClone(DEFAULT_SETTINGS);
+    mergeSettings(DEFAULT_SETTINGS, input);
+    expect(input).toEqual(before);
+    expect(DEFAULT_SETTINGS).toEqual(defaultsBefore);
+  });
 });
