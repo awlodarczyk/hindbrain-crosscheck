@@ -70,10 +70,33 @@ describe("DeletedList", () => {
     expect(screen.getByText("One")).toBeInTheDocument();
   });
 
-  it("toasts when loading fails", async () => {
-    m.listDeleted.mockRejectedValue("nope");
+  it("shows an error state and Retry reloads", async () => {
+    m.listDeleted.mockRejectedValueOnce("nope").mockResolvedValueOnce(list([item("a", "One")]));
     render(<DeletedList />);
-    await waitFor(() => expect(m.error).toHaveBeenCalledWith("Could not load deleted sessions"));
-    expect(screen.getByText("Nothing deleted")).toBeInTheDocument();
+    expect(await screen.findByText("Could not load deleted sessions.")).toBeInTheDocument();
+    expect(screen.queryByText("Nothing deleted")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(await screen.findByText("One")).toBeInTheDocument();
+    expect(m.listDeleted).toHaveBeenCalledTimes(2);
+  });
+
+  it("restores only once on double click", async () => {
+    m.listDeleted.mockResolvedValue(list([item("a", "One")]));
+    m.restore.mockReturnValue(new Promise(() => undefined));
+    render(<DeletedList />);
+    const btn = await screen.findByRole("button", { name: /Restore/ });
+    await userEvent.dblClick(btn);
+    expect(m.restore).toHaveBeenCalledTimes(1);
+    expect(btn).toBeDisabled();
+  });
+
+  it("does not update state after unmount", async () => {
+    let resolve: (v: ReturnType<typeof list>) => void = () => undefined;
+    m.listDeleted.mockReturnValue(new Promise((r) => (resolve = r)));
+    const { unmount } = render(<DeletedList />);
+    unmount();
+    resolve(list([]));
+    await Promise.resolve();
+    expect(m.error).not.toHaveBeenCalled();
   });
 });
