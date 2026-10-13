@@ -19,7 +19,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "prettier --check . && eslint . && tsc --noEmit && vitest run --coverage",
-    "db:migrate": "tsx scripts/db-migrate.ts",
+    "db:migrate": "tsx --conditions=react-server scripts/db-migrate.ts",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
