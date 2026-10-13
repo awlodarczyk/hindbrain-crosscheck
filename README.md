@@ -2,12 +2,14 @@
 
 # hindbrain crosscheck
 
+[![CI](https://github.com/hindbrain/hindbrain-crosscheck/actions/workflows/ci.yml/badge.svg)](https://github.com/hindbrain/hindbrain-crosscheck/actions/workflows/ci.yml)
+
 Ask one question and get two answers, one from Claude and one from ChatGPT, both with web
 search. Then each model cross-checks the other's answer claim by claim, citing sources.
 Every session is kept in a sidebar history. It runs locally on your machine, or hosted
 for a small team behind a login.
 
-Part of the hindbrain family (sibling of hindbrain reflex).
+Part of the hindbrain family (sibling of hindbrain reflex). Formerly FactCheck Duo 2.0.
 
 <!-- screenshot: docs/images/session-light.png -->
 
@@ -234,7 +236,7 @@ Details: [docs/API.md](docs/API.md) and [tests/security/README.md](tests/securit
 ## Data & privacy
 
 - Everything is stored in `./data/crosscheck.db` (or `DATA_DIR`), locally or on your volume.
-- Deleting a session keeps it; list deleted sessions with `GET /api/sessions/deleted` and restore one with `POST /api/sessions/{id}/restore` (a Settings screen for this is in progress).
+- Deleting a session keeps it; list deleted sessions with `GET /api/sessions/deleted` and restore one with `POST /api/sessions/{id}/restore` (Settings → Data lists deleted sessions with a Restore button).
 - The only traffic that leaves the machine is calls to the provider APIs or CLIs you
   configured, including their web searches.
 - No telemetry, no analytics, no CDN. Fonts are self-hosted.
