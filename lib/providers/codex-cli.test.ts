@@ -51,6 +51,18 @@ describe("parseCodexCliOutput", () => {
   });
 });
 
+describe("parseCodexCliOutput tolerance", () => {
+  it("keeps the message when a non-fatal error event precedes it", () => {
+    const p = parseCodexCliOutput(`{"type":"error","message":"warn"}\n${msg("fine")}`);
+    expect(p.text).toBe("fine");
+  });
+  it("fails on turn.failed even with a message", () => {
+    expect(() =>
+      parseCodexCliOutput(`${msg("x")}\n{"type":"turn.failed","error":{"message":"dead"}}`),
+    ).toThrowError(expect.objectContaining({ code: "cli_failed", message: "dead" }));
+  });
+});
+
 describe("CODEX_ARGS", () => {
   it("is read-only, json, and runs in the workdir with stdin prompt", () => {
     const a = CODEX_ARGS(req, "/w").join(" ");
@@ -115,5 +127,51 @@ describe("createCodexCliProvider", () => {
       detail: "Connected",
       path: "/bin/codex",
     });
+  });
+
+  it("uses the stdout error message when the process exits non-zero", async () => {
+    const out =
+      '{"type":"error","message":"model unsupported"}\n{"type":"turn.failed","error":{"message":"model unsupported"}}';
+    const p = createCodexCliProvider(
+      { cliPath: "/bin/codex" },
+      { spawn: fakeSpawn({ stdout: out, stderr: "noise", code: 1 }) },
+    );
+    await expect(p.call(req, { signal })).rejects.toMatchObject({
+      code: "cli_failed",
+      message: "model unsupported",
+    });
+  });
+
+  it("falls back to the runner error when stdout has no error event", async () => {
+    const p = createCodexCliProvider(
+      { cliPath: "/bin/codex" },
+      { spawn: fakeSpawn({ stderr: "bad flag", code: 2 }) },
+    );
+    await expect(p.call(req, { signal })).rejects.toMatchObject({
+      code: "cli_failed",
+      message: expect.stringContaining("bad flag"),
+    });
+  });
+
+  it("test() probes cfg.cliPath instead of which", async () => {
+    const spawn = fakeSpawn((_cmd, args) => ({
+      stdout: args[0] === "--version" ? "codex-cli 1\n" : fixture,
+    }));
+    const p = createCodexCliProvider({ cliPath: "/opt/codex" }, { spawn });
+    expect(await p.test(signal)).toMatchObject({
+      ok: true,
+      path: "/opt/codex",
+      version: "codex-cli 1",
+    });
+    expect(spawn.calls.some((c) => c.cmd === "which")).toBe(false);
+  });
+
+  it("does not expose thread ids in raw", async () => {
+    const p = createCodexCliProvider(
+      { cliPath: "/bin/codex" },
+      { spawn: fakeSpawn({ stdout: fixture }) },
+    );
+    const r = await p.call(req, { signal });
+    expect(JSON.stringify(r.raw)).not.toContain("thread");
   });
 });

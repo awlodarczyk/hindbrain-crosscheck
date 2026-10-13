@@ -32,6 +32,7 @@ const TEST_TIMEOUT_MS = 60_000;
 const eventSchema = z.object({
   type: z.string(),
   message: z.string().optional(),
+  error: z.object({ message: z.string().optional() }).optional(),
   item: z.object({ type: z.string(), text: z.string().optional() }).optional(),
   usage: z
     .object({ input_tokens: z.number().nullish(), output_tokens: z.number().nullish() })
@@ -51,38 +52,48 @@ export const CODEX_ARGS = (req: ModelRequest, workdir: string): readonly string[
   "-",
 ];
 
-function parseLines(stdout: string): readonly unknown[] {
+function parseEvents(stdout: string) {
   return stdout.split("\n").flatMap((line) => {
     try {
-      return line.trim() ? [JSON.parse(line) as unknown] : [];
+      const p = eventSchema.safeParse(JSON.parse(line));
+      return p.success ? [p.data] : [];
     } catch {
       return [];
     }
   });
 }
 
+type CodexEvent = ReturnType<typeof parseEvents>[number];
+
+const turnFailure = (events: readonly CodexEvent[]) => events.find((e) => e.type === "turn.failed");
+const errorEvent = (events: readonly CodexEvent[]) => events.find((e) => e.type === "error");
+
+/** Best failure message found in stdout events, if any. */
+function failureMessage(stdout: string): string | undefined {
+  const events = parseEvents(stdout);
+  return turnFailure(events)?.error?.message ?? errorEvent(events)?.message;
+}
+
 export function parseCodexCliOutput(stdout: string) {
-  const raw = parseLines(stdout);
-  const events = raw.flatMap((r) => {
-    const p = eventSchema.safeParse(r);
-    return p.success ? [p.data] : [];
-  });
-  const failure = events.find((e) => e.type === "error");
-  if (failure) throw new ProviderError("cli_failed", failure.message ?? "Codex reported an error.");
-  const texts = events.flatMap((e) =>
-    e.type === "item.completed" && e.item?.type === "agent_message" && e.item.text !== undefined
-      ? [e.item.text]
-      : [],
-  );
-  const text = texts.at(-1);
+  const events = parseEvents(stdout);
+  const failed = turnFailure(events);
+  if (failed) throw new ProviderError("cli_failed", failed.error?.message ?? "Codex turn failed.");
+  const text = events
+    .flatMap((e) =>
+      e.type === "item.completed" && e.item?.type === "agent_message" && e.item.text !== undefined
+        ? [e.item.text]
+        : [],
+    )
+    .at(-1);
   if (text === undefined) {
+    const err = errorEvent(events);
+    if (err) throw new ProviderError("cli_failed", err.message ?? "Codex reported an error.");
     throw new ProviderError("provider_bad_response", "Codex returned no message.");
   }
   const usage = events.findLast((e) => e.type === "turn.completed")?.usage;
   return {
     text,
     usage: { inputTokens: usage?.input_tokens ?? null, outputTokens: usage?.output_tokens ?? null },
-    raw,
   };
 }
 
@@ -105,8 +116,9 @@ export function createCodexCliProvider(
     cmd: string,
     onLine?: (l: string) => void,
   ) => {
-    const dir = mkdtemp();
+    let dir: string | undefined;
     try {
+      dir = mkdtemp();
       return await runCli(cmd, CODEX_ARGS(req, dir), {
         input: buildPrompt(req),
         timeoutMs: req.timeoutMs,
@@ -114,8 +126,14 @@ export function createCodexCliProvider(
         spawn: deps.spawn,
         onStderrLine: onLine,
       });
+    } catch (e) {
+      if (!(e instanceof ProviderError)) {
+        throw new ProviderError("cli_failed", `codex failed to start: ${String(e)}`, { cause: e });
+      }
+      const message = e.code === "cli_failed" ? failureMessage(e.stdout ?? "") : undefined;
+      throw message ? new ProviderError("cli_failed", message, { cause: e }) : e;
     } finally {
-      rmSync(dir, { recursive: true, force: true });
+      if (dir) rmSync(dir, { recursive: true, force: true });
     }
   };
 
@@ -135,11 +153,11 @@ export function createCodexCliProvider(
         model: req.model,
         usage: { ...out.usage, searches },
         durationMs: res.durationMs,
-        raw: out.raw,
+        raw: { durationMs: res.durationMs, usage: out.usage },
       };
     },
     async test(signal: AbortSignal): Promise<ProviderStatus> {
-      const info = await detectCli("codex", { spawn: deps.spawn });
+      const info = await detectCli("codex", { spawn: deps.spawn, path: cfg.cliPath });
       if (!info.found) {
         return {
           ok: false,

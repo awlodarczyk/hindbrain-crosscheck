@@ -42,4 +42,24 @@ describe("detectCli", () => {
     await detectCli("claude", { spawn });
     expect(spawn.calls).toHaveLength(4);
   });
+
+  it("probes an explicit path without which and caches per path", async () => {
+    const spawn = fakeSpawn(ok);
+    const info = await detectCli("claude", { spawn, path: "/x/claude" });
+    expect(info).toMatchObject({ found: true, path: "/x/claude" });
+    expect(spawn.calls.map((c) => c.cmd)).toEqual(["/x/claude"]);
+    await detectCli("claude", { spawn, path: "/y/claude" });
+    expect(spawn.calls).toHaveLength(2);
+  });
+
+  it("de-duplicates concurrent probes and expires misses after 10 s", async () => {
+    const spawn = fakeSpawn({ code: 1 });
+    let t = 0;
+    const opts = { spawn, now: () => t };
+    await Promise.all([detectCli("codex", opts), detectCli("codex", opts)]);
+    expect(spawn.calls).toHaveLength(1);
+    t = 11_000;
+    await detectCli("codex", opts);
+    expect(spawn.calls).toHaveLength(2);
+  });
 });

@@ -24,6 +24,10 @@ export const CHILD_ENV_ALLOWLIST: readonly string[] = [
   "TERM",
   "TMPDIR",
   "XDG_CONFIG_HOME",
+  "USER",
+  "LOGNAME",
+  "CODEX_HOME",
+  "CLAUDE_CONFIG_DIR",
 ];
 
 const STDERR_CAP = 64 * 1024;
@@ -83,6 +87,7 @@ export function runCli(
       if (kill) {
         signalTree(child, "SIGTERM");
         graceTimer = setTimeout(() => signalTree(child, "SIGKILL"), KILL_GRACE_MS);
+        graceTimer.unref();
         child.once("close", () => clearTimeout(graceTimer));
       }
       reject(err);
@@ -95,12 +100,16 @@ export function runCli(
     );
     opts.signal.addEventListener("abort", onAbort, { once: true });
 
+    child.stdout?.setEncoding("utf8");
+    child.stderr?.setEncoding("utf8");
     child.stdout?.on("data", (d: Buffer | string) => {
+      if (settled) return;
       stdout += String(d);
       if (stdout.length > STDOUT_CAP)
         fail(new ProviderError("cli_failed", "output too large"), true);
     });
     child.stderr?.on("data", (d: Buffer | string) => {
+      if (settled) return;
       stderr = (stderr + String(d)).slice(-STDERR_CAP);
       const lines = (pending + String(d)).split("\n");
       pending = lines.pop() ?? "";
@@ -124,6 +133,7 @@ export function runCli(
         new ProviderError(
           "cli_failed",
           `${cmd} exited with code ${code}: ${stderr.slice(-tailChars)}`,
+          { stdout },
         ),
       );
     });

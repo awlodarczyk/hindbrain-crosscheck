@@ -28,6 +28,8 @@ const MAX_TURNS = "6";
 const outputSchema = z.object({
   is_error: z.boolean().optional(),
   result: z.string(),
+  num_turns: z.number().nullish(),
+  duration_ms: z.number().nullish(),
   total_cost_usd: z.number().nullish(),
   usage: z
     .object({ input_tokens: z.number().nullish(), output_tokens: z.number().nullish() })
@@ -68,7 +70,11 @@ export function parseClaudeCliOutput(stdout: string) {
       outputTokens: d.usage?.output_tokens ?? null,
     },
     costUsd: d.total_cost_usd ?? null,
-    raw,
+    meta: {
+      numTurns: d.num_turns ?? null,
+      durationMs: d.duration_ms ?? null,
+      costUsd: d.total_cost_usd ?? null,
+    },
   };
 }
 
@@ -106,11 +112,11 @@ export function createClaudeCliProvider(
         model: req.model,
         usage: { ...out.usage, searches },
         durationMs: res.durationMs,
-        raw: out.raw,
+        raw: out.meta,
       };
     },
     async test(signal: AbortSignal): Promise<ProviderStatus> {
-      const info = await detectCli("claude", { spawn: deps.spawn });
+      const info = await detectCli("claude", { spawn: deps.spawn, path: cfg.cliPath });
       if (!info.found) {
         return {
           ok: false,

@@ -11,16 +11,19 @@ export type ProviderErrorCode =
 export class ProviderError extends Error {
   readonly code: ProviderErrorCode;
   readonly status?: number;
+  /** Captured process stdout, set for CLI failures. */
+  readonly stdout?: string;
 
   constructor(
     code: ProviderErrorCode,
     message: string,
-    opts: { cause?: unknown; status?: number } = {},
+    opts: { cause?: unknown; status?: number; stdout?: string } = {},
   ) {
     super(message, { cause: opts.cause });
     this.name = "ProviderError";
     this.code = code;
     this.status = opts.status;
+    this.stdout = opts.stdout;
   }
 }
 
