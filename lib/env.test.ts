@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseEnv } from "./env";
 const base = { APP_SECRET: "test-secret-32-bytes-minimum-length!!" };
 
@@ -52,5 +52,38 @@ describe("parseEnv", () => {
         APP_URL: "",
       }),
     ).toThrow(/VALKEY_URL.*ADMIN_EMAIL.*ADMIN_PASSWORD.*APP_URL/s);
+  });
+  it("reports hosted requirements alongside other invalid keys", () => {
+    expect(() => parseEnv({ APP_SECRET: "short", APP_MODE: "hosted" })).toThrow(
+      /APP_SECRET[\s\S]*VALKEY_URL[\s\S]*ADMIN_EMAIL[\s\S]*ADMIN_PASSWORD[\s\S]*APP_URL/,
+    );
+  });
+});
+
+describe("env singleton", () => {
+  const saved = process.env.APP_SECRET;
+  afterEach(() => {
+    if (saved === undefined) delete process.env.APP_SECRET;
+    else process.env.APP_SECRET = saved;
+    vi.resetModules();
+  });
+
+  it("does not throw on import, only on access, when APP_SECRET is unset", async () => {
+    delete process.env.APP_SECRET;
+    vi.stubEnv("NODE_ENV", "production");
+    vi.resetModules();
+    const mod = await import("./env");
+    expect(() => mod.env.APP_MODE).toThrow(mod.EnvError);
+    vi.unstubAllEnvs();
+  });
+
+  it("falls back to the test secret under vitest", async () => {
+    delete process.env.APP_SECRET;
+    vi.resetModules();
+    const mod = await import("./env");
+    expect(mod.env.APP_MODE).toBe("local");
+    expect(Object.keys(mod.env)).toContain("PORT");
+    expect("PORT" in mod.env).toBe(true);
+    mod.resetEnvForTests();
   });
 });

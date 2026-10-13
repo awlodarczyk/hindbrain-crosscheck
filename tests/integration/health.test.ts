@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { env } from "@/lib/env";
 import { GET } from "@/app/api/health/route";
 
 describe("GET /api/health", () => {
@@ -8,7 +9,7 @@ describe("GET /api/health", () => {
     expect(res.headers.get("cache-control")).toBe("no-store");
     expect(await res.json()).toEqual({
       ok: true,
-      data: { status: "ok", mode: "local", version: expect.any(String) },
+      data: { status: "ok", mode: env.APP_MODE, version: expect.any(String) },
     });
   });
 });

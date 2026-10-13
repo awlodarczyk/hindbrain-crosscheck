@@ -3,6 +3,7 @@ import { env } from "@/lib/env";
 import { ok } from "@/lib/http/envelope";
 import { APP_VERSION } from "@/lib/version";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export function GET() {
