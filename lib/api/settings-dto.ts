@@ -37,4 +37,5 @@ export type SettingsView = {
   models: Record<ProviderId, readonly { id: string; label: string }[]>;
   savedAt: string | null;
   mode: "local" | "hosted";
+  transportMode: "auto" | "mock";
 };

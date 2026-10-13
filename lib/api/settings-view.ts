@@ -94,5 +94,6 @@ export async function buildSettingsView(
     },
     savedAt: updatedAt,
     mode: env.APP_MODE,
+    transportMode: env.PROVIDER_TRANSPORT,
   };
 }
