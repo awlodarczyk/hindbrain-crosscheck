@@ -62,6 +62,11 @@ export function useSettings(initial: SettingsView) {
       if (patch.appearance?.reduceMotion !== undefined) {
         document.documentElement.classList.toggle("reduce-motion", patch.appearance.reduceMotion);
       }
+      if (patch.appearance) {
+        window.dispatchEvent(
+          new CustomEvent("hc:appearance-changed", { detail: patch.appearance }),
+        );
+      }
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => void flush(), SAVE_DELAY_MS);
     },
