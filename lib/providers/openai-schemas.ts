@@ -20,6 +20,8 @@ export const openAIResponseSchema = z.object({
   id: z.string().optional(),
   model: z.string(),
   output_text: z.string().nullish(),
+  status: z.string().nullish(),
+  incomplete_details: z.object({ reason: z.string().nullish() }).nullish(),
   output: z.array(outputItemSchema),
   usage: z
     .object({ input_tokens: z.number().optional(), output_tokens: z.number().optional() })

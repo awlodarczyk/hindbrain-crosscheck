@@ -79,6 +79,7 @@ describe("openai provider", () => {
     expect(e.code).toBe("provider_http");
     expect(e.status).toBe(429);
     expect(e.message).toContain("Rate limit reached");
+    expect(e.message).not.toContain(KEY);
   });
 
   it("maps 401 to no_credentials", async () => {
@@ -149,6 +150,48 @@ describe("openai provider", () => {
     const e = await failure(run(f));
     expect(e.code).toBe("timeout");
     expect(e.message).not.toContain(KEY);
+  });
+
+  it("maps a TimeoutError during body read to timeout", async () => {
+    const res = new Response("{}", { status: 200 });
+    vi.spyOn(res, "json").mockRejectedValue(new DOMException("x", "TimeoutError"));
+    const e = await failure(run(fakeFetch(res)));
+    expect(e.code).toBe("timeout");
+  });
+
+  it("maps a TimeoutError during error-body read to timeout", async () => {
+    const res = new Response("{}", { status: 500 });
+    vi.spyOn(res, "json").mockRejectedValue(new DOMException("x", "TimeoutError"));
+    const e = await failure(run(fakeFetch(res)));
+    expect(e.code).toBe("timeout");
+  });
+
+  it("maps any failure to aborted when the caller signal is aborted", async () => {
+    const ac = new AbortController();
+    ac.abort(new Error("custom reason"));
+    const f = vi.fn<typeof fetch>().mockRejectedValue(new Error("boom"));
+    const e = await failure(run(f, req, undefined, ac.signal));
+    expect(e.code).toBe("aborted");
+  });
+
+  it("flags incomplete responses as truncated", async () => {
+    const body = {
+      ...answerOk,
+      status: "incomplete",
+      incomplete_details: { reason: "max_output_tokens" },
+    };
+    const res = await run(fakeFetch(json(body)));
+    expect(res.text.endsWith("\n\n[Answer truncated at the length limit.]")).toBe(true);
+  });
+
+  it("falls back to parts when output_text is empty", async () => {
+    const res = await run(fakeFetch(json({ ...answerOk, output_text: "" })));
+    expect(res.text).toContain("Water boils");
+  });
+
+  it("errors when output_text and parts are both empty", async () => {
+    const e = await failure(run(fakeFetch(json({ ...noText, output_text: "" }))));
+    expect(e.code).toBe("provider_bad_response");
   });
 
   it("maps other fetch failures to network", async () => {

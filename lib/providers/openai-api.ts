@@ -21,6 +21,7 @@ export const REASONING_MODELS: readonly string[] = ["gpt-5.5", "gpt-5.5-mini"];
 const MAX_OUTPUT_TOKENS = 8000;
 const TEST_MODEL = "gpt-5.5-mini";
 const TEST_TIMEOUT_MS = 15_000;
+const TRUNCATED_NOTE = "\n\n[Answer truncated at the length limit.]";
 
 export type OpenAIRequestBody = {
   model: string;
@@ -63,7 +64,7 @@ export function parseOpenAIOutput(data: OpenAIResponse) {
   const parts = data.output
     .flatMap((item) => item.content ?? [])
     .filter((c) => c.type === "output_text");
-  const text = data.output_text ?? parts.map((p) => p.text ?? "").join("\n");
+  const text = data.output_text || parts.map((p) => p.text ?? "").join("\n");
   const citations: Citation[] = parts.flatMap((p) =>
     (p.annotations ?? []).flatMap((a) =>
       a.type === "url_citation" && a.url ? [{ title: a.title ?? a.url, url: a.url }] : [],
@@ -76,14 +77,28 @@ export function parseOpenAIOutput(data: OpenAIResponse) {
   };
 }
 
-async function readError(res: Response): Promise<ProviderError> {
-  const parsed = openAIErrorSchema.safeParse(await res.json().catch(() => null));
+async function readError(
+  res: Response,
+  signal: AbortSignal,
+  timeoutMs: number,
+): Promise<ProviderError> {
+  let body: unknown = null;
+  try {
+    body = await res.json();
+  } catch (e) {
+    if (isAbortLike(e, signal)) return mapFetchError(e, signal, timeoutMs);
+  }
+  const parsed = openAIErrorSchema.safeParse(body);
   const message = (parsed.success && parsed.data.error?.message) || `HTTP ${res.status}`;
   const code = res.status === 401 || res.status === 403 ? "no_credentials" : "provider_http";
   return new ProviderError(code, `OpenAI API: ${message}`, { status: res.status });
 }
 
-function mapFetchError(e: unknown, timeoutMs: number): ProviderError {
+const isAbortLike = (e: unknown, signal: AbortSignal) =>
+  signal.aborted || (e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError"));
+
+function mapFetchError(e: unknown, signal: AbortSignal, timeoutMs: number): ProviderError {
+  if (signal.aborted) return new ProviderError("aborted", "OpenAI API call aborted.", { cause: e });
   const name = e instanceof Error ? e.name : "";
   if (name === "TimeoutError") {
     return new ProviderError(
@@ -115,12 +130,13 @@ export function createOpenAIProvider(cfg: { apiKey?: string }, deps: ProviderDep
         signal: AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]),
       });
     } catch (e) {
-      throw mapFetchError(e, timeoutMs);
+      throw mapFetchError(e, signal, timeoutMs);
     }
-    if (!res.ok) throw await readError(res);
+    if (!res.ok) throw await readError(res, signal, timeoutMs);
     try {
       return openAIResponseSchema.parse(await res.json());
     } catch (cause) {
+      if (isAbortLike(cause, signal)) throw mapFetchError(cause, signal, timeoutMs);
       throw new ProviderError("provider_bad_response", "OpenAI returned an unexpected response.", {
         cause,
       });
@@ -142,7 +158,7 @@ export function createOpenAIProvider(cfg: { apiKey?: string }, deps: ProviderDep
       if (parsed.searches > 0) onProgress?.({ phase: "searching", searches: parsed.searches });
       onProgress?.({ phase: "writing", searches: parsed.searches });
       return {
-        text: parsed.text,
+        text: parsed.text + (data.status === "incomplete" ? TRUNCATED_NOTE : ""),
         citations: parsed.citations,
         model: data.model,
         usage: {
