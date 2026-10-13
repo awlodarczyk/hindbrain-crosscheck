@@ -1,0 +1,49 @@
+{
+  "id": "msg_01A",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-opus-5-5",
+  "content": [
+    {
+      "type": "server_tool_use",
+      "id": "srvtoolu_01",
+      "name": "web_search",
+      "input": { "query": "boiling point of water at altitude" }
+    },
+    {
+      "type": "web_search_tool_result",
+      "tool_use_id": "srvtoolu_01",
+      "content": [
+        {
+          "type": "web_search_result",
+          "url": "https://example.org/boiling",
+          "title": "Boiling point",
+          "page_age": "April 2025",
+          "encrypted_content": "abc"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "text": "Water boils at about 100 C at sea level and lower at altitude.",
+      "citations": [
+        {
+          "type": "web_search_result_location",
+          "url": "https://example.org/boiling",
+          "title": "Boiling point",
+          "cited_text": "Water boils at 100 C",
+          "encrypted_index": "x"
+        },
+        {
+          "type": "web_search_result_location",
+          "url": "https://example.org/altitude",
+          "title": "Altitude effects",
+          "cited_text": "lower pressure",
+          "encrypted_index": "y"
+        }
+      ]
+    }
+  ],
+  "stop_reason": "end_turn",
+  "usage": { "input_tokens": 2100, "output_tokens": 640 }
+}

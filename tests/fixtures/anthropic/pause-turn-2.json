@@ -1,0 +1,17 @@
+{
+  "id": "msg_01C",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-opus-5-5",
+  "content": [
+    { "type": "text", "text": "Still searching. " },
+    {
+      "type": "server_tool_use",
+      "id": "srvtoolu_12",
+      "name": "web_search",
+      "input": { "query": "second query" }
+    }
+  ],
+  "stop_reason": "pause_turn",
+  "usage": { "input_tokens": 100, "output_tokens": 20 }
+}
