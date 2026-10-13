@@ -5,6 +5,7 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fieldClass } from "./input";
+import { focusRing } from "./ring";
 
 export const Select = SelectPrimitive.Root;
 export const SelectGroup = SelectPrimitive.Group;
@@ -18,6 +19,7 @@ export const SelectTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       fieldClass,
+      focusRing,
       "flex h-8 cursor-pointer items-center justify-between gap-2 data-[placeholder]:text-text-muted",
       className,
     )}

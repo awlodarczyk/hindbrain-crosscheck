@@ -24,7 +24,7 @@ export const CommandInput = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Input>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
 >(({ className, ...props }, ref) => (
-  <div className="flex items-center gap-2 border-b border-border-default px-3">
+  <div className="flex items-center gap-2 border-b border-border-default px-3 focus-within:ring-2 focus-within:ring-inset focus-within:ring-accent-default">
     <Search className="size-4 shrink-0 text-text-muted" />
     <CommandPrimitive.Input
       ref={ref}

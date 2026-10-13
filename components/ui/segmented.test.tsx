@@ -33,7 +33,42 @@ describe("Segmented", () => {
     const { onChange, user } = setup();
     await user.tab();
     await user.keyboard("{ArrowRight}");
+    expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith("b");
+  });
+
+  it("does not call onChange when tabbing into the group", async () => {
+    const { onChange, user } = setup();
+    await user.tab();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("calls onChange exactly once per click", async () => {
+    const { onChange, user } = setup();
+    await user.click(screen.getByRole("radio", { name: "Beta" }));
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips disabled options and wraps with arrows", async () => {
+    const { onChange, user } = setup("b");
+    await user.tab();
+    await user.keyboard("{ArrowRight}");
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith("a");
+  });
+
+  it("jumps with Home and End", async () => {
+    const { onChange, user } = setup("b");
+    await user.tab();
+    await user.keyboard("{Home}");
+    expect(onChange).toHaveBeenLastCalledWith("a");
+  });
+
+  it("jumps to the last enabled option with End", async () => {
+    const { onChange, user } = setup("a");
+    await user.tab();
+    await user.keyboard("{End}");
+    expect(onChange).toHaveBeenLastCalledWith("b");
   });
 
   it("ignores a click on the selected option", async () => {
