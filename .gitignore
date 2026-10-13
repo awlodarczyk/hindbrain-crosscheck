@@ -17,3 +17,4 @@ tests/visual/actual/
 data-e2e/
 data-e2e-hosted/
 .next-hosted/
+.next-*/
