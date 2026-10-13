@@ -1,1 +1,101 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* prettier-ignore */
+:root {
+  --bg-page: #FFFFFF;
+  --bg-subtle: #FAFAFA;
+  --bg-card: #FFFFFF;
+  --bg-muted: #F4F4F5;
+  --bg-selected: #EEF2FF;
+  --bg-disputed: #FEF2F2;
+  --text-primary: #09090B;
+  --text-secondary: #71717A;
+  --text-muted: #A1A1AA;
+  --border-default: #E4E4E7;
+  --border-strong: #D4D4D8;
+  --accent-default: #4F46E5;
+  --accent-on: #FFFFFF;
+  --status-supported: #16A34A;
+  --status-disputed: #DC2626;
+  --status-unverifiable: #D97706;
+  --status-running: #71717A;
+  --model-claude: #B4552D;
+  --model-chatgpt: #2F5F8A;
+  --radius-control: 6px;
+  --radius-panel: 8px;
+  --radius-dialog: 12px;
+}
+
+/* prettier-ignore */
+.dark {
+  --bg-page: #09090B;
+  --bg-subtle: #0F0F11;
+  --bg-card: #18181B;
+  --bg-muted: #27272A;
+  --bg-selected: #1E1B4B;
+  --bg-disputed: #2A1414;
+  --text-primary: #FAFAFA;
+  --text-secondary: #A1A1AA;
+  --text-muted: #71717A;
+  --border-default: #27272A;
+  --border-strong: #3F3F46;
+  --accent-default: #818CF8;
+  --accent-on: #09090B;
+  --status-supported: #4ADE80;
+  --status-disputed: #F87171;
+  --status-unverifiable: #FBBF24;
+  --status-running: #A1A1AA;
+  --model-claude: #D97757;
+  --model-chatgpt: #6AA0D1;
+}
+
+@theme inline {
+  --color-bg-page: var(--bg-page);
+  --color-bg-subtle: var(--bg-subtle);
+  --color-bg-card: var(--bg-card);
+  --color-bg-muted: var(--bg-muted);
+  --color-bg-selected: var(--bg-selected);
+  --color-bg-disputed: var(--bg-disputed);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+  --color-accent-default: var(--accent-default);
+  --color-accent-on: var(--accent-on);
+  --color-status-supported: var(--status-supported);
+  --color-status-disputed: var(--status-disputed);
+  --color-status-unverifiable: var(--status-unverifiable);
+  --color-status-running: var(--status-running);
+  --color-model-claude: var(--model-claude);
+  --color-model-chatgpt: var(--model-chatgpt);
+  --radius-control: 6px;
+  --radius-panel: 8px;
+  --radius-dialog: 12px;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-bg-page text-text-primary font-sans antialiased;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.reduce-motion,
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
+}
