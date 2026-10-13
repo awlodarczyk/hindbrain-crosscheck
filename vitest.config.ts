@@ -26,9 +26,11 @@ export default defineConfig({
       },
       {
         resolve: { alias },
+        oxc: { jsx: { runtime: "automatic" } },
         test: {
           name: "dom",
           environment: "jsdom",
+          setupFiles: ["./tests/setup/jest-dom.ts"],
           include: ["components/**/*.test.{ts,tsx}"],
         },
       },

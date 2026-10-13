@@ -1,0 +1,12 @@
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { Kbd } from "./kbd";
+
+describe("Kbd", () => {
+  it("renders a mono kbd element", () => {
+    render(<Kbd>K</Kbd>);
+    const el = screen.getByText("K");
+    expect(el.tagName).toBe("KBD");
+    expect(el).toHaveClass("font-mono");
+  });
+});
