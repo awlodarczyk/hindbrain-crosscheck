@@ -70,7 +70,7 @@ function errorResponse(e: unknown, requestId: string, cookies: readonly string[]
   if (isHttpError(e)) {
     const extra: Record<string, string> = {};
     const retry = (e.details as { retryAfterSec?: number } | undefined)?.retryAfterSec;
-    if (e.status === 429 && typeof retry === "number") extra["retry-after"] = String(retry);
+    if (typeof retry === "number") extra["retry-after"] = String(retry);
     return withHeaders(
       NextResponse.json(fail(e.code, e.message, e.details), { status: e.status }),
       requestId,
@@ -127,7 +127,7 @@ function chargeFor(
 
 /**
  * Wraps a handler with request id, auth, query/body validation, rate limiting and the response envelope.
- * Order: csrf, auth, params, query, body, then limiter (after validation so invalid requests cost nothing), then handler.
+ * Order: csrf, auth (unauthenticated 401s are charged 1 point on the ip layer), params, query, body, then limiter (after validation so invalid requests cost nothing), then handler.
  */
 export function defineRoute<B = undefined, Q = undefined>(
   spec: RouteSpec<B, Q>,
@@ -143,8 +143,17 @@ export function defineRoute<B = undefined, Q = undefined>(
       if (browser.cookie) cookies.push(browser.cookie);
       const csrf = isSameOriginMutation(req, allowedOriginFor(req, env));
       if (!csrf.ok) throw errors.csrf(csrf.reason);
+      const ip = clientIp(req, {
+        trustProxy: env.TRUST_PROXY === "1",
+        socketIp: null,
+        local: isLocal(),
+      });
       const session = spec.auth === "none" ? null : await getAuthGuard()(req);
-      if (spec.auth !== "none" && !session) throw errors.unauthorized();
+      if (spec.auth !== "none" && !session) {
+        const d = await getLimiter().consume({ ip }, 1);
+        if (!d.allowed) throw errors.rateLimited(d.retryAfterSec, d.layer, 1);
+        throw errors.unauthorized();
+      }
       if (session?.renewed && session.token) {
         cookies.push(
           sessionCookieHeader(session.token, {
@@ -155,11 +164,7 @@ export function defineRoute<B = undefined, Q = undefined>(
       }
       const ctx: RequestContext = {
         userId: session?.userId ?? ANONYMOUS_USER,
-        ip: clientIp(req, {
-          trustProxy: env.TRUST_PROXY === "1",
-          socketIp: null,
-          local: isLocal(),
-        }),
+        ip,
         browserId: browser.id,
         requestId,
         now,

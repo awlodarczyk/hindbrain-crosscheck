@@ -43,4 +43,21 @@ describe("allowedOriginFor", () => {
       "http://127.0.0.1:4173",
     );
   });
+
+  it("rejects a non-loopback Host when local (DNS rebinding)", () => {
+    const r = new Request("http://evil.com:4173/api/x", {
+      method: "POST",
+      headers: { host: "evil.com:4173", origin: "http://evil.com:4173" },
+    });
+    const allowed = allowedOriginFor(r, { APP_MODE: "local", APP_URL: undefined });
+    expect(isSameOriginMutation(r, allowed)).toEqual({ ok: false, reason: "origin_mismatch" });
+  });
+
+  it.each(["localhost:3000", "127.0.0.1:4173", "[::1]:8080"])(
+    "accepts loopback Host %s",
+    (host) => {
+      const r = new Request("http://x/api/x", { headers: { host } });
+      expect(allowedOriginFor(r, { APP_MODE: "local", APP_URL: undefined })).toBe(`http://${host}`);
+    },
+  );
 });

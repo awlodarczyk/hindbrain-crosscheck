@@ -35,4 +35,9 @@ describe("browser id", () => {
     expect(h).toBe("hc_bid=v; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000");
     expect(browserIdCookieHeader("v", { secure: true })).toMatch(/; Secure$/);
   });
+  it("rejects ids older than 366 days", () => {
+    const old = issueBrowserId(secret, t0);
+    expect(verifyBrowserId(secret, old, plus(365 * 86_400))).not.toBeNull();
+    expect(verifyBrowserId(secret, old, plus(367 * 86_400))).toBeNull();
+  });
 });

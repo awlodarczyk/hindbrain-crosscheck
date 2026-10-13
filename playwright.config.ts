@@ -57,7 +57,7 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         baseURL: hostedURL,
-        extraHTTPHeaders: { origin: hostedURL },
+        extraHTTPHeaders: { origin: hostedURL, "x-forwarded-for": "203.0.113.10" },
       },
       testMatch: HOSTED_SPEC,
     },

@@ -20,6 +20,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "prettier --check . && eslint . && tsc --noEmit && vitest run --coverage",
+    "test:security": "vitest run tests/security components/session/claim-row.security.test.tsx",
+    "secrets:rotate": "tsx --conditions=react-server scripts/secrets-rotate.ts",
     "db:migrate": "tsx --conditions=react-server scripts/db-migrate.ts",
     "user:create": "tsx --conditions=react-server scripts/user-create.ts",
     "user:reset-password": "tsx --conditions=react-server scripts/user-reset-password.ts",

@@ -35,4 +35,12 @@ describe("clientIp", () => {
     expect(clientIp(r, { trustProxy: true })).toBe("1.2.3.4");
     expect(clientIp(r, { trustProxy: false, socketIp: "::FFFF:5.6.7.8" })).toBe("5.6.7.8");
   });
+  it("normalizes hex IPv4-mapped IPv6", () => {
+    expect(clientIp(req({ "x-forwarded-for": "::ffff:7f00:1" }), { trustProxy: true })).toBe(
+      "127.0.0.1",
+    );
+    expect(clientIp(req({}), { trustProxy: false, socketIp: "::ffff:c000:22a" })).toBe(
+      "192.0.2.42",
+    );
+  });
 });

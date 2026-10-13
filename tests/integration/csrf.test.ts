@@ -41,4 +41,15 @@ describe("csrf on mutations", () => {
     const res = await sessions.GET(new Request("http://localhost/api/sessions"), ctx());
     expect(res.status).toBe(200);
   });
+
+  it("does not csrf-block a cross-site SSE GET", async () => {
+    const events = await import("@/app/api/sessions/[id]/events/route");
+    const res = await events.GET(
+      new Request("http://localhost/api/sessions/nope/events", {
+        headers: { "sec-fetch-site": "cross-site", origin: "https://evil.example" },
+      }),
+      ctx({ id: "nope" }),
+    );
+    expect(res.status).not.toBe(403);
+  });
 });

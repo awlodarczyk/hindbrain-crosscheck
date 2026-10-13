@@ -27,7 +27,8 @@ export const errors = {
       layer,
       cost,
     }),
-  unavailable: (code: string, message: string) => new HttpError(503, code, message),
+  unavailable: (code: string, message: string, retryAfterSec?: number) =>
+    new HttpError(503, code, message, retryAfterSec === undefined ? undefined : { retryAfterSec }),
 };
 
 export function isHttpError(e: unknown): e is HttpError {

@@ -1,3 +1,4 @@
+import { log } from "@/lib/log";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "@/lib/db/client";
 import type { ProviderId, SessionMode } from "@/lib/db/enums";
@@ -222,7 +223,7 @@ describe("runSession", () => {
   });
 
   it("completes the run when the emitter throws", async () => {
-    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const spy = vi.spyOn(log, "error").mockImplementation(() => undefined);
     const d = {
       ...deps(),
       emit: () => {

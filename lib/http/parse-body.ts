@@ -21,6 +21,28 @@ export function parseQuery<Q>(req: Request, schema: z.ZodType<Q>): Q {
   return r.data;
 }
 
+/** Streams the body, cancelling the source as soon as it exceeds `maxBytes`. @throws HttpError 413. */
+async function readCapped(
+  req: Request,
+  maxBytes: number,
+): Promise<{ text: string; bytes: number }> {
+  if (!req.body) return { text: "", bytes: 0 };
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let bytes = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    bytes += value.byteLength;
+    if (bytes > maxBytes) {
+      await reader.cancel().catch(() => undefined);
+      throw errors.tooLarge();
+    }
+    chunks.push(value);
+  }
+  return { text: Buffer.concat(chunks).toString("utf8"), bytes };
+}
+
 /**
  * Reads the body once, enforcing content type and size before JSON parsing.
  * @throws HttpError 415 wrong content type, 413 over `maxBytes`, 400 invalid JSON or schema mismatch.
@@ -35,9 +57,7 @@ export async function parseBody<B>(
   }
   const declared = Number(req.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > opts.maxBytes) throw errors.tooLarge();
-  const text = await req.text();
-  const bytes = Buffer.byteLength(text);
-  if (bytes > opts.maxBytes) throw errors.tooLarge();
+  const { text, bytes } = await readCapped(req, opts.maxBytes);
   let json: unknown;
   try {
     json = JSON.parse(text);

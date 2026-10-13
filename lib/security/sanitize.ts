@@ -16,8 +16,6 @@ const SANITIZE: sanitizeHtml.IOptions = {
     "blockquote",
     "code",
     "pre",
-    "h1",
-    "h2",
     "h3",
     "h4",
     "a",

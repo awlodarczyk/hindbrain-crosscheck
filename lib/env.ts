@@ -79,6 +79,9 @@ export function parseEnv(raw: Readonly<Record<string, string | undefined>>): Env
   throw new EnvError(all);
 }
 
+/** True under vitest; the only place outside {@link getEnv} that reads `process.env.VITEST`. */
+export const isTestRuntime = (): boolean => Boolean(process.env.VITEST);
+
 const shouldFallBackToTestSecret = () =>
   Boolean(process.env.VITEST) && process.env.NODE_ENV === "test" && !process.env.APP_SECRET;
 

@@ -4,6 +4,8 @@ import { replaceClaims } from "@/lib/repos/claims";
 import { recomputeStats } from "@/lib/repos/sessions";
 import { deriveSessionStatus } from "@/lib/repos/stats";
 import type { Call } from "@/lib/repos/types";
+import { log } from "@/lib/log";
+import { scrubSecrets } from "@/lib/security/scrub";
 import { isProviderError } from "@/lib/providers/errors";
 import type { ColumnDeps, ColumnPlan } from "./column";
 
@@ -17,9 +19,9 @@ export type CallPatch = Partial<Omit<Call, "id" | "runId">>;
 
 const MAX_ERROR_CHARS = 500;
 
-/** Reports a swallowed pipeline error. TODO: route through lib/log once it exists. */
+/** Reports a swallowed pipeline error. */
 export function logError(where: string, e: unknown): void {
-  console.error(`[pipeline] ${where}`, e);
+  log.error({ err: e, where }, "pipeline error");
 }
 
 export const clock = (d: Pick<ColumnDeps, "now">): Date => (d.now ?? (() => new Date()))();
@@ -69,7 +71,7 @@ export function settle(deps: RowDeps, id: string, patch: CallPatch): Call {
 export function fail(deps: RowDeps, id: string, e: unknown): void {
   const code = isProviderError(e) ? e.code : "internal";
   const raw = e instanceof Error ? e.message : "Unexpected error.";
-  const message = raw.slice(0, MAX_ERROR_CHARS);
+  const message = scrubSecrets(raw).slice(0, MAX_ERROR_CHARS);
   settle(deps, id, {
     status: "failed",
     finishedAt: clock(deps).toISOString(),

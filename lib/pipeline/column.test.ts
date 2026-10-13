@@ -1,3 +1,4 @@
+import { log } from "@/lib/log";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import fixtures from "@/tests/fixtures/mock-answers.json";
 import type { Db } from "@/lib/db/client";
@@ -251,7 +252,7 @@ describe("runColumn", () => {
 
 describe("runColumn resilience", () => {
   it("never rejects when an emitter throws and fails the rows it left open", async () => {
-    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const spy = vi.spyOn(log, "error").mockImplementation(() => undefined);
     const d = {
       ...deps(),
       emit: () => {

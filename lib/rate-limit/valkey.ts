@@ -15,7 +15,8 @@ export type RedisLike = {
 type Opts = { budgets?: typeof BUDGETS; now?: () => number; keyPrefix?: string };
 
 const SCOPES: readonly LimitScope[] = ["browser", "ip", "user"];
-const unavailable = () => errors.unavailable("limiter_unavailable", "Rate limiter is unavailable.");
+const unavailable = () =>
+  errors.unavailable("limiter_unavailable", "Rate limiter is unavailable.", 5);
 const isNoScript = (e: unknown) => e instanceof Error && e.message.startsWith("NOSCRIPT");
 
 function parseReply(reply: unknown, layers: readonly LimitScope[]): LimitDecision | null {
