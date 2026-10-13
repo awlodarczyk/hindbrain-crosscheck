@@ -1,0 +1,28 @@
+{
+  "answers": {
+    "claude": {
+      "text": "**Static stretching before training does not reliably prevent injury, and long holds can briefly reduce strength.**\n\n- A large trial of 2,630 army recruits found no change in lower-limb injury rate with pre-exercise static stretching (Pope et al., 2000).\n- Holds longer than 60 seconds can cut force output, though the loss is small and short-lived in pooled data.\n- Structured dynamic warm-ups such as FIFA 11+ lower injury rates by roughly 30 to 40 percent.\n\nFor most athletes, a short dynamic warm-up is the better default, and static stretching fits best after the session.",
+      "citations": [
+        { "title": "PubMed: Pope et al. 2000", "url": "https://pubmed.ncbi.nlm.nih.gov/10694106/" },
+        {
+          "title": "BJSM: stretching and performance",
+          "url": "https://bjsm.bmj.com/content/46/12/838"
+        }
+      ]
+    },
+    "chatgpt": {
+      "text": "**Skipping static stretches before you train is generally fine; the evidence for injury prevention is weak.**\n\n- Army recruit data (2,630 people) showed injury rates were similar with or without pre-exercise stretching.\n- Stretching held for a minute or more may cost you some strength for up to an hour, according to some studies.\n- Neuromuscular programmes like FIFA 11+ are linked to injury reductions of around a third.\n\nSwap static holds for dynamic movement before play and stretch afterwards if you enjoy it.",
+      "citations": [
+        { "title": "PubMed", "url": "https://pubmed.ncbi.nlm.nih.gov/10694106/" },
+        { "title": "BJSM: FIFA 11+ meta-analysis", "url": "https://bjsm.bmj.com/content/51/7/562" }
+      ]
+    }
+  },
+  "review": {
+    "text": "Mostly accurate; one claim is overstated.\n\n```json\n{ \"overall\": \"Mostly accurate; one claim overstated.\",\n  \"claims\": [\n    { \"claim\": \"Pope et al. (2000) followed 2,630 army recruits and found no change in lower-limb injury rate\", \"verdict\": \"supported\", \"note\": \"Matches Med Sci Sports Exerc, 2000.\", \"source\": { \"title\": \"PubMed\", \"url\": \"https://pubmed.ncbi.nlm.nih.gov/10694106/\" } },\n    { \"claim\": \"Holds over 60 s cut strength for up to an hour\", \"verdict\": \"disputed\", \"note\": \"Pooled data: ~5 % loss, mostly gone within 30 min.\", \"source\": { \"title\": \"BJSM\", \"url\": \"https://bjsm.bmj.com/content/46/12/838\" } },\n    { \"claim\": \"FIFA 11+ cuts injuries by roughly 30–40 %\", \"verdict\": \"supported\", \"note\": \"Consistent with Thorborg 2017 meta-analysis.\", \"source\": { \"title\": \"BJSM\", \"url\": \"https://bjsm.bmj.com/content/51/7/562\" } },\n    { \"claim\": \"Dynamic warm-ups beat static stretching\", \"verdict\": \"supported\", \"note\": \"Behm et al. 2016 review.\", \"source\": { \"title\": \"NIH\", \"url\": \"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4800040/\" } }\n  ] }\n```",
+    "citations": [
+      { "title": "PubMed", "url": "https://pubmed.ncbi.nlm.nih.gov/10694106/" },
+      { "title": "BJSM", "url": "https://bjsm.bmj.com/content/46/12/838" }
+    ]
+  }
+}
