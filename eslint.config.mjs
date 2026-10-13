@@ -7,6 +7,7 @@ const config = [
     ignores: [
       ".next/**",
       ".next-hosted/**",
+      ".next-*/**",
       "coverage/**",
       "playwright-report/**",
       "test-results/**",
