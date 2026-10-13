@@ -250,7 +250,7 @@ describe("runColumn", () => {
 });
 
 describe("runColumn resilience", () => {
-  it("never rejects when an emitter throws", async () => {
+  it("never rejects when an emitter throws and fails the rows it left open", async () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const d = {
       ...deps(),
@@ -260,6 +260,30 @@ describe("runColumn resilience", () => {
     };
     await expect(runColumn(d, plan)).resolves.toBeUndefined();
     expect(spy).toHaveBeenCalled();
+    const [answer] = listCalls(db, runId);
+    expect(answer).toMatchObject({
+      status: "failed",
+      errorCode: "internal",
+      errorMessage: "subscriber gone",
+    });
     spy.mockRestore();
+  });
+
+  it("skips the review with reason aborted when aborted after the answer", async () => {
+    const ac = new AbortController();
+    const d = {
+      ...deps(),
+      signal: ac.signal,
+      emit: (e: RunEvent) => {
+        events.push(e);
+        if (e.type === "call.done") ac.abort();
+      },
+    };
+    await runColumn(d, plan);
+    const [answer, review] = listCalls(db, runId);
+    expect(answer?.status).toBe("done");
+    expect(review).toMatchObject({ status: "skipped", errorCode: "aborted" });
+    expect(d.providers.chatgpt.call).not.toHaveBeenCalled();
+    expect(events.at(-1)).toMatchObject({ type: "call.skipped", reason: "aborted" });
   });
 });

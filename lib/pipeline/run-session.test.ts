@@ -177,20 +177,62 @@ describe("runSession", () => {
 
   it("marks calls aborted and still finishes the session on abort", async () => {
     const ac = new AbortController();
-    const d = deps(
-      {
+    const d = {
+      ...deps({
         claude: provider("claude", { delayMs: 50 }),
         chatgpt: provider("chatgpt", { delayMs: 50 }),
+      }),
+      signal: ac.signal,
+      emit: (e: RunEvent) => {
+        events.push(e);
+        if (e.type === "call.progress") ac.abort();
       },
-      ac.signal,
-    );
-    setTimeout(() => ac.abort(), 10);
+    };
     const res = await runSession(d, session(), { reason: "initial" });
     expect(res.status).toBe("failed");
     const failed = events.filter((e) => e.type === "call.failed");
     expect(failed).toHaveLength(2);
     failed.forEach((e) => expect(e).toMatchObject({ code: "aborted" }));
-    expect(listCalls(db, res.runId).filter((c) => c.errorCode === "aborted")).toHaveLength(2);
+    const calls = listCalls(db, res.runId);
+    expect(calls.filter((c) => c.errorCode === "aborted")).toHaveLength(4);
+    expect(calls.filter((c) => c.status === "skipped")).toHaveLength(2);
     expect(events.at(-1)).toMatchObject({ type: "session.done", status: "failed" });
+  });
+
+  it("refuses to retry a pasted answer", async () => {
+    const sid = session("paste");
+    const first = await runSession(deps(), sid, { reason: "initial", pasted: { claude: "A." } });
+    const pasted = listCalls(db, first.runId).find((c) => c.pasted);
+    const d = deps();
+    await expect(runSession(d, sid, { reason: "manual", retryCallId: pasted?.id })).rejects.toThrow(
+      "pasted answers are not retryable",
+    );
+    expect(callCount(d)).toBe(0);
+    expect(listCalls(db, first.runId).find((c) => c.pasted)?.text).toBe("A.");
+  });
+
+  it("retries the review of a pasted answer", async () => {
+    const sid = session("paste");
+    const first = await runSession(deps(), sid, { reason: "initial", pasted: { claude: "A." } });
+    const review = listCalls(db, first.runId).find((c) => c.kind === "review");
+    const d = deps();
+    const res = await runSession(d, sid, { reason: "manual", retryCallId: review?.id });
+    expect(callCount(d)).toBe(1);
+    expect(res.status).toBe("done");
+  });
+
+  it("completes the run when the emitter throws", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const d = {
+      ...deps(),
+      emit: () => {
+        throw new Error("subscriber gone");
+      },
+    };
+    const res = await runSession(d, session(), { reason: "initial" });
+    expect(res.status).toBe("done");
+    expect(listCalls(db, res.runId).every((c) => c.status === "done")).toBe(true);
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
   });
 });

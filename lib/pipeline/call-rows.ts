@@ -5,13 +5,22 @@ import { recomputeStats } from "@/lib/repos/sessions";
 import { deriveSessionStatus } from "@/lib/repos/stats";
 import type { Call } from "@/lib/repos/types";
 import { isProviderError } from "@/lib/providers/errors";
-import type { ColumnDeps } from "./column";
+import type { ColumnDeps, ColumnPlan } from "./column";
 
 /** The subset of column deps needed to write call rows and publish stats. */
-export type RowDeps = Pick<ColumnDeps, "db" | "providers" | "emit" | "now" | "sessionId" | "runId">;
+export type RowDeps = Pick<
+  ColumnDeps,
+  "db" | "providers" | "models" | "emit" | "now" | "sessionId" | "runId"
+>;
+export type SkipReason = "answer_failed" | "aborted";
 export type CallPatch = Partial<Omit<Call, "id" | "runId">>;
 
 const MAX_ERROR_CHARS = 500;
+
+/** Reports a swallowed pipeline error. TODO: route through lib/log once it exists. */
+export function logError(where: string, e: unknown): void {
+  console.error(`[pipeline] ${where}`, e);
+}
 
 export const clock = (d: Pick<ColumnDeps, "now">): Date => (d.now ?? (() => new Date()))();
 
@@ -40,8 +49,11 @@ export function upsertCall(
       provider,
       transport: deps.providers[provider].transport,
     });
-  replaceClaims(deps.db, existingId, []);
-  return updateCall(deps.db, existingId, fields);
+  // better-sqlite3 runs the callback synchronously on the single connection, so both writes share it.
+  return deps.db.transaction(() => {
+    replaceClaims(deps.db, existingId, []);
+    return updateCall(deps.db, existingId, fields);
+  });
 }
 
 /** Applies `patch`, recomputes the session stats and emits `session.stats`. */
@@ -77,4 +89,40 @@ export function emitDone(deps: RowDeps, call: Call, claims?: number): void {
     searches: call.searches,
     ...(claims === undefined ? {} : { claims }),
   });
+}
+
+const SKIP_MESSAGE: Record<SkipReason, string> = {
+  answer_failed: "The answer failed, so there was nothing to review.",
+  aborted: "The run was cancelled before the review started.",
+};
+
+/** Stores the column's review as skipped and emits `call.skipped`. */
+export function skipReview(deps: RowDeps, plan: ColumnPlan, reason: SkipReason): void {
+  const { id } = upsertCall(deps, "review", plan.reviewer, plan.existing?.reviewCallId, {
+    model: deps.models[plan.reviewer].verification,
+    errorCode: reason,
+    errorMessage: SKIP_MESSAGE[reason],
+  });
+  settle(deps, id, { status: "skipped" });
+  deps.emit({ type: "call.skipped", sessionId: deps.sessionId, callId: id, reason });
+}
+
+/** Best-effort: fails this column's rows that are still open after an unexpected error. */
+export function failOpenRows(deps: RowDeps, plan: ColumnPlan, e: unknown): void {
+  const mine = (c: Call) =>
+    (c.kind === "answer" && c.provider === plan.answerer) ||
+    (c.kind === "review" && c.provider === plan.reviewer);
+  try {
+    listCalls(deps.db, deps.runId)
+      .filter((c) => mine(c) && (c.status === "running" || c.status === "queued"))
+      .forEach((c) => {
+        try {
+          fail(deps, c.id, e);
+        } catch (inner) {
+          logError("failing open row", inner);
+        }
+      });
+  } catch (inner) {
+    logError("listing open rows", inner);
+  }
 }

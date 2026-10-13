@@ -59,4 +59,15 @@ describe("renderMarkdown", () => {
     expect(html.length).toBeLessThan(MAX_MARKDOWN_CHARS + 50);
     expect(html).toContain("…");
   });
+
+  it("does not split a surrogate pair when truncating", () => {
+    const html = renderMarkdown(`${"a".repeat(MAX_MARKDOWN_CHARS - 1)}\u{1F600}tail`);
+    expect(html).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/);
+    expect(html).not.toContain("\u{1F600}");
+    expect(html).toContain("…");
+  });
+
+  it("keeps strikethrough", () => {
+    expect(renderMarkdown("~~gone~~")).toContain("<del>gone</del>");
+  });
 });

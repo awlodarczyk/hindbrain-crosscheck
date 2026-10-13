@@ -6,6 +6,7 @@ export const MAX_MARKDOWN_CHARS = 200_000;
 const SANITIZE: sanitizeHtml.IOptions = {
   allowedTags: [
     "p",
+    "del",
     "br",
     "strong",
     "em",
@@ -40,13 +41,20 @@ const SANITIZE: sanitizeHtml.IOptions = {
   },
 };
 
+/** Cuts `s` to at most `max` UTF-16 units without splitting a surrogate pair. */
+function truncate(s: string, max: number): string {
+  const last = s.charCodeAt(max - 1);
+  const splitsPair = last >= 0xd800 && last <= 0xdbff;
+  return s.slice(0, splitsPair ? max - 1 : max);
+}
+
 /**
  * Renders untrusted model Markdown (GFM) to sanitized HTML; the only HTML that may be stored or
  * rendered for answers. Input beyond {@link MAX_MARKDOWN_CHARS} is truncated with "…".
  */
 export function renderMarkdown(md: string): string {
   if (!md) return "";
-  const input = md.length > MAX_MARKDOWN_CHARS ? `${md.slice(0, MAX_MARKDOWN_CHARS)}…` : md;
+  const input = md.length > MAX_MARKDOWN_CHARS ? `${truncate(md, MAX_MARKDOWN_CHARS)}…` : md;
   const html = marked.parse(input, { async: false, gfm: true });
   return sanitizeHtml(html, SANITIZE).trim();
 }
