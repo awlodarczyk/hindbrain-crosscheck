@@ -93,7 +93,41 @@ describe("defineRoute", () => {
     const res = await echo(post('{"n":1}'));
     expect(res.status).toBe(429);
     expect(res.headers.get("retry-after")).toBe("12");
-    expect((await res.json()).error.details).toEqual({ retryAfterSec: 12, layer: "ip" });
+    expect((await res.json()).error.details).toEqual({ retryAfterSec: 12, layer: "ip", cost: 10 });
+  });
+
+  it("anonymous ask without a browser cookie is charged double and reports the cost", async () => {
+    const consume = vi.fn(allowAll.consume);
+    setDepsForTests({ limiter: { consume } });
+    const anonAsk = defineRoute({ auth: "none", op: "ask" }, () => 1);
+    const res = await anonAsk(new Request("http://localhost/"));
+    expect(consume).toHaveBeenCalledWith(expect.anything(), 20);
+    expect(res.headers.get("x-ratelimit-cost")).toBe("20");
+  });
+
+  it("the same anonymous ask with a browser cookie costs the base amount", async () => {
+    const consume = vi.fn(allowAll.consume);
+    setDepsForTests({ limiter: { consume } });
+    const anonAsk = defineRoute({ auth: "none", op: "ask" }, () => 1);
+    const res = await anonAsk(
+      new Request("http://localhost/", { headers: { cookie: "hc_bid=abcdefghijklmnop" } }),
+    );
+    expect(consume).toHaveBeenCalledWith(expect.anything(), 10);
+    expect(res.headers.get("x-ratelimit-cost")).toBe("10");
+  });
+
+  it("429 carries layer, retry-after and the effective cost", async () => {
+    setDepsForTests({
+      limiter: {
+        consume: async () => ({ allowed: false, retryAfterSec: 7, remaining: 0, layer: "browser" }),
+      },
+    });
+    const anonAsk = defineRoute({ auth: "none", op: "ask" }, () => 1);
+    const res = await anonAsk(new Request("http://localhost/"));
+    expect(res.status).toBe(429);
+    expect(res.headers.get("retry-after")).toBe("7");
+    const details = (await res.json()).error.details;
+    expect(details).toEqual({ retryAfterSec: 7, layer: "browser", cost: 20 });
   });
 
   it("does not charge the limiter for invalid requests", async () => {

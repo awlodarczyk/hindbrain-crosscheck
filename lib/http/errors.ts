@@ -20,10 +20,11 @@ export const errors = {
   conflict: (code: string, message: string) => new HttpError(409, code, message),
   tooLarge: () => new HttpError(413, "payload_too_large", "Request body is too large."),
   unsupportedMedia: () => new HttpError(415, "unsupported_media_type", "Unsupported content type."),
-  rateLimited: (retryAfterSec: number, layer: string | null) =>
+  rateLimited: (retryAfterSec: number, layer: string | null, cost: number) =>
     new HttpError(429, "rate_limited", "Too many requests. Try again shortly.", {
       retryAfterSec,
       layer,
+      cost,
     }),
   unavailable: (code: string, message: string) => new HttpError(503, code, message),
 };

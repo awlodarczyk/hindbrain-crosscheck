@@ -16,6 +16,15 @@ export const OPERATION_COST = {
 
 export type OperationName = keyof typeof OPERATION_COST;
 
+/** Operations that get the anonymous risk multiplier (see `risk.ts`). */
+export const RISKY_OPS: readonly OperationName[] = [
+  "login",
+  "ask",
+  "rerun",
+  "paste_import_per_10kb",
+  "reveal_secret",
+];
+
 export const BUDGETS: Record<LimitScope, { points: number; windowSec: number }> = {
   browser: { points: 300, windowSec: 600 },
   ip: { points: 3000, windowSec: 600 },

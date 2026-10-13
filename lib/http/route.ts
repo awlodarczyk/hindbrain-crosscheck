@@ -4,6 +4,7 @@ import type { z } from "zod";
 import { env } from "@/lib/env";
 import { log } from "@/lib/log";
 import { isLocal } from "@/lib/mode";
+import { effectiveCost } from "@/lib/rate-limit/risk";
 import { costForBody, type OperationName } from "@/lib/rate-limit/weights";
 import { browserIdFromCookie, clientIp } from "@/lib/security/ip";
 import { randomToken } from "@/lib/security/crypto";
@@ -64,6 +65,25 @@ function errorResponse(e: unknown, requestId: string): Response {
 }
 
 /**
+ * Points to charge. Function ops have no operation name, so they bypass the risk multiplier.
+ * TODO: the browser id is unsigned and untimed; a present id is treated as aged (no multiplier) until signed ids carry a timestamp.
+ */
+function chargeFor(
+  op: RouteSpec<unknown, unknown>["op"],
+  bodyBytes: number,
+  ctx: RequestContext,
+  authenticated: boolean,
+): number {
+  if (typeof op === "function") return op({ bodyBytes });
+  const base = costForBody(op, bodyBytes);
+  return effectiveCost(base, {
+    browserIdAgeSec: ctx.browserId ? Infinity : null,
+    authenticated,
+    op,
+  });
+}
+
+/**
  * Wraps a handler with request id, auth, query/body validation, rate limiting and the response envelope.
  * Order: auth, params, query, body, then limiter (after validation so invalid requests cost nothing), then handler.
  */
@@ -98,16 +118,23 @@ export function defineRoute<B = undefined, Q = undefined>(
             })
           : null;
       const bodyBytes = parsed?.bytes ?? 0;
-      const cost =
-        typeof spec.op === "function" ? spec.op({ bodyBytes }) : costForBody(spec.op, bodyBytes);
+      const cost = chargeFor(
+        spec.op,
+        bodyBytes,
+        ctx,
+        session !== null && session.userId !== ANONYMOUS_USER,
+      );
       const decision = await getLimiter().consume(
         { browser: ctx.browserId ?? undefined, ip: ctx.ip, user: session?.userId },
         cost,
       );
-      if (!decision.allowed) throw errors.rateLimited(decision.retryAfterSec, decision.layer);
+      if (!decision.allowed) throw errors.rateLimited(decision.retryAfterSec, decision.layer, cost);
       const result = await handler({ ctx, body: parsed?.value as B, query, req, params });
       const res = result instanceof Response ? result : NextResponse.json(ok(result));
-      return withHeaders(res, requestId, { "x-ratelimit-remaining": String(decision.remaining) });
+      return withHeaders(res, requestId, {
+        "x-ratelimit-remaining": String(decision.remaining),
+        "x-ratelimit-cost": String(cost),
+      });
     } catch (e) {
       return errorResponse(e, requestId);
     }

@@ -11,7 +11,7 @@ describe("errors", () => {
     [errors.conflict("dup", "Duplicate."), 409, "dup"],
     [errors.tooLarge(), 413, "payload_too_large"],
     [errors.unsupportedMedia(), 415, "unsupported_media_type"],
-    [errors.rateLimited(7, "ip"), 429, "rate_limited"],
+    [errors.rateLimited(7, "ip", 10), 429, "rate_limited"],
     [errors.unavailable("down", "Down."), 503, "down"],
   ])("%#", (e, status, code) => {
     expect(e.status).toBe(status);
@@ -19,7 +19,11 @@ describe("errors", () => {
   });
 
   it("carries details and detects HttpError", () => {
-    expect(errors.rateLimited(7, "ip").details).toEqual({ retryAfterSec: 7, layer: "ip" });
+    expect(errors.rateLimited(7, "ip", 10).details).toEqual({
+      retryAfterSec: 7,
+      layer: "ip",
+      cost: 10,
+    });
     expect(isHttpError(new HttpError(400, "x", "y"))).toBe(true);
     expect(isHttpError(new Error("x"))).toBe(false);
     expect(isHttpError(null)).toBe(false);
