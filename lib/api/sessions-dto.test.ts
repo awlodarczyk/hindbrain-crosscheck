@@ -1,8 +1,20 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { EMPTY_STATS, type Session } from "@/lib/repos/types";
 import { CreateSessionBody, ListQuery, RenameBody, toListItem } from "./sessions-dto";
 
 describe("CreateSessionBody", () => {
+  it("normalises an exported ChatGPT transcript to plain turns", () => {
+    const transcript = readFileSync("tests/fixtures/transcripts/chatgpt-export.json", "utf8");
+    expect(CreateSessionBody.parse({ mode: "transcript", transcript }).transcript).toBe(
+      "User: Does stretching prevent injuries?\n\nAssistant: Not reliably.",
+    );
+  });
+  it("still rejects an oversized plain transcript", () => {
+    expect(
+      CreateSessionBody.safeParse({ mode: "transcript", transcript: "x".repeat(200_001) }).success,
+    ).toBe(false);
+  });
   it("trims and defaults mode", () => {
     expect(CreateSessionBody.parse({ question: "  hi  " })).toMatchObject({
       question: "hi",

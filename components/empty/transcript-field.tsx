@@ -3,7 +3,7 @@
 import { Textarea } from "@/components/ui/textarea";
 import { TRANSCRIPT_MAX } from "@/lib/api/sessions-dto";
 
-/** One transcript textarea with a character counter and a plain-text file picker. */
+/** One transcript textarea with a character counter and a text/JSON file picker. */
 export function TranscriptField({
   value,
   onChange,
@@ -30,10 +30,10 @@ export function TranscriptField({
       />
       <div className="flex items-center justify-between gap-3 text-[11px] text-text-muted">
         <label className="cursor-pointer underline-offset-2 hover:underline">
-          Load a .txt / .md file
+          Load a .txt / .md / .json file
           <input
             type="file"
-            accept=".txt,.md,.markdown,text/plain"
+            accept=".txt,.md,.markdown,.json,text/plain,application/json"
             className="sr-only"
             onChange={(e) => void pick(e.target.files?.[0])}
           />

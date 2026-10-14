@@ -1,0 +1,59 @@
+[
+  {
+    "title": "Stretching",
+    "current_node": "a1",
+    "mapping": {
+      "root": { "id": "root", "parent": null, "children": ["sys"], "message": null },
+      "sys": {
+        "id": "sys",
+        "parent": "root",
+        "children": ["u1"],
+        "message": {
+          "author": { "role": "system" },
+          "content": { "content_type": "text", "parts": ["You are helpful."] },
+          "create_time": 1
+        }
+      },
+      "u1": {
+        "id": "u1",
+        "parent": "sys",
+        "children": ["old", "t1"],
+        "message": {
+          "author": { "role": "user" },
+          "content": { "content_type": "text", "parts": ["Does stretching prevent injuries?"] },
+          "create_time": 2
+        }
+      },
+      "old": {
+        "id": "old",
+        "parent": "u1",
+        "children": [],
+        "message": {
+          "author": { "role": "assistant" },
+          "content": { "content_type": "text", "parts": ["Abandoned draft."] },
+          "create_time": 3
+        }
+      },
+      "t1": {
+        "id": "t1",
+        "parent": "u1",
+        "children": ["a1"],
+        "message": {
+          "author": { "role": "tool" },
+          "content": { "content_type": "text", "parts": ["search results"] },
+          "create_time": 4
+        }
+      },
+      "a1": {
+        "id": "a1",
+        "parent": "t1",
+        "children": [],
+        "message": {
+          "author": { "role": "assistant" },
+          "content": { "content_type": "text", "parts": ["Not reliably.", { "asset": "x" }] },
+          "create_time": 5
+        }
+      }
+    }
+  }
+]
