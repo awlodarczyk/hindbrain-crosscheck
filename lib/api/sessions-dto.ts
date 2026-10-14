@@ -7,16 +7,23 @@ import { listClaimsForCalls } from "@/lib/repos/claims";
 import { listRuns } from "@/lib/repos/runs";
 import { getSession } from "@/lib/repos/sessions";
 import type { Call, Claim, Run, Session } from "@/lib/repos/types";
+import { normalizeTranscript } from "@/lib/transcript/normalize";
 
 const modelOverride = z.object({ answerModel: z.string().optional() }).partial().optional();
 
 export const TRANSCRIPT_MAX = 200_000;
+export const TRANSCRIPT_RAW_MAX = 500_000;
 
 const CreateSessionSchema = z
   .object({
     question: z.string().trim().max(8000).default(""),
     mode: z.enum(["ask", "paste", "transcript"]).default("ask"),
-    transcript: z.string().trim().max(TRANSCRIPT_MAX).optional(),
+    transcript: z
+      .string()
+      .max(TRANSCRIPT_RAW_MAX)
+      .transform((s) => normalizeTranscript(s))
+      .pipe(z.string().trim().max(TRANSCRIPT_MAX))
+      .optional(),
     pasted: z
       .object({
         claude: z.string().max(200_000).optional(),

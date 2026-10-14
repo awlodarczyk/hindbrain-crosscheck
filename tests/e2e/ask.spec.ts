@@ -49,3 +49,21 @@ test("transcript mode runs both columns and shows the imported conversation", as
     expect(body.data.calls).toHaveLength(4);
   }).toPass({ timeout: 30_000 });
 });
+
+test("transcript mode normalises a pasted Claude export", async ({ page }) => {
+  const claudeExport = JSON.stringify({
+    uuid: "c1",
+    chat_messages: [
+      { sender: "human", text: "Does stretching prevent injuries?" },
+      { sender: "assistant", text: "", content: [{ type: "text", text: "Not reliably." }] },
+    ],
+  });
+  await page.goto("/");
+  await page.getByRole("radio", { name: "Import a transcript" }).click();
+  await page.getByLabel("Chat transcript").fill(claudeExport);
+  await page.getByRole("button", { name: /Ask & cross-check/ }).click();
+  await expect(page).toHaveURL(SESSION_URL, { timeout: 30_000 });
+  await page.locator("details summary", { hasText: "Imported transcript" }).click();
+  await expect(page.locator("details pre")).toContainText(/^User: Does stretching/);
+  await expect(page.getByText("chat_messages")).toHaveCount(0);
+});
