@@ -13,37 +13,30 @@ const EXPECTED = "User: Does stretching prevent injuries?\n\nAssistant: Not reli
 
 describe("normalizeTranscript", () => {
   it("flattens a ChatGPT export along current_node, dropping system, tool and abandoned branches", () => {
-    expect(normalizeTranscript(fixture("chatgpt-export"))).toEqual({
-      format: "chatgpt",
-      text: EXPECTED,
-    });
+    expect(normalizeTranscript(fixture("chatgpt-export"))).toBe(EXPECTED);
   });
   it("flattens a Claude export and falls back to content[] when text is empty", () => {
-    expect(normalizeTranscript(fixture("claude-export"))).toEqual({
-      format: "claude",
-      text: EXPECTED,
-    });
+    expect(normalizeTranscript(fixture("claude-export"))).toBe(EXPECTED);
   });
   it("accepts a single conversation object instead of an array", () => {
     const [one] = JSON.parse(fixture("claude-export")) as unknown[];
-    expect(normalizeTranscript(JSON.stringify(one)).format).toBe("claude");
+    expect(normalizeTranscript(JSON.stringify(one))).toBe(EXPECTED);
     const [gpt] = JSON.parse(fixture("chatgpt-export")) as unknown[];
-    expect(normalizeTranscript(JSON.stringify(gpt)).format).toBe("chatgpt");
+    expect(normalizeTranscript(JSON.stringify(gpt))).toBe(EXPECTED);
   });
   it("picks the deepest leaf when current_node is missing", () => {
     const [gpt] = JSON.parse(fixture("chatgpt-export")) as Record<string, unknown>[];
-    const out = normalizeTranscript(JSON.stringify({ ...gpt, current_node: null }));
-    expect(out).toEqual({ format: "chatgpt", text: EXPECTED });
+    expect(normalizeTranscript(JSON.stringify({ ...gpt, current_node: null }))).toBe(EXPECTED);
   });
   it("never resolves prototype members as nodes", () => {
     const [gpt] = JSON.parse(fixture("chatgpt-export")) as Record<string, unknown>[];
     for (const current_node of ["constructor", "toString"]) {
       const raw = JSON.stringify({ ...gpt, current_node });
-      expect(normalizeTranscript(raw).text).toBe(EXPECTED);
+      expect(normalizeTranscript(raw)).toBe(EXPECTED);
     }
     const orphan = { mapping: { a: { parent: "constructor", children: [] } }, current_node: "a" };
     const raw = JSON.stringify(orphan);
-    expect(normalizeTranscript(raw)).toEqual({ format: "plain", text: raw });
+    expect(normalizeTranscript(raw)).toBe(raw);
   });
   it("terminates on a parent cycle", () => {
     const user = (parent: string) => ({
@@ -52,33 +45,33 @@ describe("normalizeTranscript", () => {
       message: { author: { role: "user" }, content: { content_type: "text", parts: ["hi"] } },
     });
     const raw = JSON.stringify({ mapping: { a: user("b"), b: user("a") }, current_node: "a" });
-    expect(normalizeTranscript(raw).text).toBe("User: hi\n\nUser: hi");
+    expect(normalizeTranscript(raw)).toBe("User: hi\n\nUser: hi");
   });
   it("uses the first conversation of several", () => {
     const [first] = JSON.parse(fixture("claude-export")) as unknown[];
     const second = { chat_messages: [{ sender: "human", text: "other" }] };
-    expect(normalizeTranscript(JSON.stringify([first, second])).text).toBe(EXPECTED);
+    expect(normalizeTranscript(JSON.stringify([first, second]))).toBe(EXPECTED);
   });
   it("treats an empty chat_messages array and missing parents as plain or safe", () => {
     const empty = JSON.stringify([{ chat_messages: [] }]);
-    expect(normalizeTranscript(empty).format).toBe("plain");
+    expect(normalizeTranscript(empty)).toBe(empty);
     const dangling = JSON.stringify({
       mapping: { a: { parent: "missing", children: [], message: null } },
       current_node: "a",
     });
-    expect(normalizeTranscript(dangling).format).toBe("plain");
+    expect(normalizeTranscript(dangling)).toBe(dangling);
   });
   it("returns plain text untouched", () => {
     const raw = "User: hi\nAssistant: hello";
-    expect(normalizeTranscript(raw)).toEqual({ format: "plain", text: raw });
+    expect(normalizeTranscript(raw)).toBe(raw);
   });
   it("returns text that does not start with a JSON bracket as plain", () => {
     const raw = '  Assistant: {"chat_messages":[]}';
-    expect(normalizeTranscript(raw)).toEqual({ format: "plain", text: raw });
+    expect(normalizeTranscript(raw)).toBe(raw);
   });
   it("treats JSON of unknown shape, empty mapping and invalid JSON as plain", () => {
     for (const raw of ['{"a":1}', "[1,2]", '[{"mapping":{}}]', '{"chat_messages":[]}', "{oops"]) {
-      expect(normalizeTranscript(raw)).toEqual({ format: "plain", text: raw });
+      expect(normalizeTranscript(raw)).toBe(raw);
     }
   });
 });

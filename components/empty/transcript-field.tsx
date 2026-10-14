@@ -13,7 +13,7 @@ export function TranscriptField({
   value: string;
   onChange: (v: string) => void;
 }) {
-  const accept = (raw: string) => onChange(normalizeTranscript(raw).text.slice(0, TRANSCRIPT_MAX));
+  const accept = (raw: string) => onChange(normalizeTranscript(raw).slice(0, TRANSCRIPT_MAX));
   function paste(e: ClipboardEvent<HTMLTextAreaElement>) {
     e.preventDefault();
     const { value: current, selectionStart, selectionEnd } = e.currentTarget;

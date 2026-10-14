@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 export type Turn = { readonly role: "user" | "assistant"; readonly text: string };
-export type TranscriptFormat = "chatgpt" | "claude" | "plain";
 
 const ChatGptNode = z
   .object({
@@ -33,17 +32,23 @@ const ClaudeMessage = z
   .passthrough();
 const ClaudeConversation = z.object({ chat_messages: z.array(ClaudeMessage) }).passthrough();
 
-type Nodes = z.infer<typeof ChatGptConversation>["mapping"];
+type MappingNodes = z.infer<typeof ChatGptConversation>["mapping"];
 
 function firstConversation(json: unknown): unknown {
   return Array.isArray(json) ? json[0] : json;
 }
 
-function nodeAt(mapping: Nodes, id: string): Nodes[string] | undefined {
+const ROLE_LABEL: Record<Turn["role"], string> = { user: "User", assistant: "Assistant" };
+const CLAUDE_SENDER_ROLE: Record<string, Turn["role"] | undefined> = {
+  human: "user",
+  assistant: "assistant",
+};
+
+function nodeAt(mapping: MappingNodes, id: string): MappingNodes[string] | undefined {
   return Object.hasOwn(mapping, id) ? mapping[id] : undefined;
 }
 
-function pathToRoot(mapping: Nodes, endId: string): readonly string[] {
+function pathToRoot(mapping: MappingNodes, endId: string): readonly string[] {
   const ids: string[] = [];
   const seen = new Set<string>();
   for (let id: string | null | undefined = endId; id && nodeAt(mapping, id) && !seen.has(id);) {
@@ -54,7 +59,7 @@ function pathToRoot(mapping: Nodes, endId: string): readonly string[] {
   return ids.reverse();
 }
 
-function deepestLeaf(mapping: Nodes): string | null {
+function deepestLeaf(mapping: MappingNodes): string | null {
   const leaves = Object.keys(mapping).filter((id) => mapping[id]?.children.length === 0);
   const depth = (id: string) => pathToRoot(mapping, id).length;
   return leaves.reduce<string | null>(
@@ -63,7 +68,7 @@ function deepestLeaf(mapping: Nodes): string | null {
   );
 }
 
-function nodeToTurn(node: Nodes[string] | undefined): Turn | null {
+function nodeToTurn(node: MappingNodes[string] | undefined): Turn | null {
   const message = node?.message;
   const role = message?.author.role;
   if ((role !== "user" && role !== "assistant") || message?.content.content_type !== "text") {
@@ -92,20 +97,21 @@ export function parseClaudeExport(json: unknown): Turn[] | null {
   const parsed = ClaudeConversation.safeParse(firstConversation(json));
   if (!parsed.success) return null;
   const turns = parsed.data.chat_messages.flatMap((m): Turn[] => {
-    if (m.sender !== "human" && m.sender !== "assistant") return [];
+    const role = CLAUDE_SENDER_ROLE[m.sender];
+    if (!role) return [];
     const joined = (m.content ?? [])
       .filter((c) => c.type === "text")
       .map((c) => c.text ?? "")
       .join("\n");
     const text = (m.text?.trim() ? m.text : joined).trim();
-    return text === "" ? [] : [{ role: m.sender === "human" ? "user" : "assistant", text }];
+    return text === "" ? [] : [{ role, text }];
   });
   return turns.length > 0 ? turns : null;
 }
 
 /** Renders turns as `User: …` / `Assistant: …` blocks separated by one blank line. */
 export function formatTurns(turns: readonly Turn[]): string {
-  return turns.map((t) => `${t.role === "user" ? "User" : "Assistant"}: ${t.text}`).join("\n\n");
+  return turns.map((t) => `${ROLE_LABEL[t.role]}: ${t.text}`).join("\n\n");
 }
 
 function tryParseJson(raw: string): unknown {
@@ -116,17 +122,11 @@ function tryParseJson(raw: string): unknown {
   }
 }
 
-/** Converts a ChatGPT or Claude export JSON string into plain turns; any other input is returned unchanged as `plain`. */
-export function normalizeTranscript(raw: string): { text: string; format: TranscriptFormat } {
-  if (!/^\s*[{[]/.test(raw)) return { format: "plain", text: raw };
+/** Converts a ChatGPT or Claude export JSON string into plain turns; any other input is returned unchanged. */
+export function normalizeTranscript(raw: string): string {
+  if (!/^\s*[{[]/.test(raw)) return raw;
   const json = tryParseJson(raw);
-  const detected: readonly [Exclude<TranscriptFormat, "plain">, Turn[] | null][] =
-    json === undefined
-      ? []
-      : [
-          ["chatgpt", parseChatGptExport(json)],
-          ["claude", parseClaudeExport(json)],
-        ];
-  const hit = detected.find(([, turns]) => turns !== null);
-  return hit?.[1] ? { format: hit[0], text: formatTurns(hit[1]) } : { format: "plain", text: raw };
+  if (json === undefined) return raw;
+  const turns = parseChatGptExport(json) ?? parseClaudeExport(json);
+  return turns ? formatTurns(turns) : raw;
 }

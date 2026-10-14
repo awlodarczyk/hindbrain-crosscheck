@@ -21,7 +21,7 @@ const CreateSessionSchema = z
     transcript: z
       .string()
       .max(TRANSCRIPT_RAW_MAX)
-      .transform((s) => normalizeTranscript(s).text)
+      .transform((s) => normalizeTranscript(s))
       .pipe(z.string().trim().max(TRANSCRIPT_MAX))
       .optional(),
     pasted: z
