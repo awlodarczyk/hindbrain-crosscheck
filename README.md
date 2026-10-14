@@ -1,4 +1,4 @@
-<img src="docs/images/mark.svg" width="40" alt="hindbrain crosscheck mark">
+<img src=".github/images/mark.svg" width="40" alt="hindbrain crosscheck mark">
 
 # hindbrain crosscheck
 
@@ -11,7 +11,7 @@ for a small team behind a login.
 
 Part of the hindbrain family (sibling of hindbrain reflex). Formerly FactCheck Duo 2.0.
 
-<img src="docs/images/session-light.png" alt="Session view: Claude and ChatGPT answers side by side with claims checked, supported and disputed counts" width="100%">
+<img src=".github/images/session-light.png" alt="Session view: Claude and ChatGPT answers side by side with claims checked, supported and disputed counts" width="100%">
 
 ## How it works
 
@@ -29,11 +29,11 @@ read them, especially for medical, legal or financial topics.
 | | |
 |---|---|
 | **Cross-check.** Every claim with its verdict, the model that checked it and the source it used. | **Sources.** Every link both models cited, tagged by which answer or review used it. |
-| <img src="docs/images/cross-check.png" alt="Cross-check tab: claims table with verdict, claim text, checked by, source"> | <img src="docs/images/sources.png" alt="Sources tab: list of cited domains and URLs with Claude answer, ChatGPT answer and review tags"> |
+| <img src=".github/images/cross-check.png" alt="Cross-check tab: claims table with verdict, claim text, checked by, source"> | <img src=".github/images/sources.png" alt="Sources tab: list of cited domains and URLs with Claude answer, ChatGPT answer and review tags"> |
 | **New question.** Pick models and a search budget, or paste two existing answers. | **Settings · Models.** Claude Code CLI or API key per provider, answer and verification models, reasoning effort. |
-| <img src="docs/images/new-question.png" alt="New question screen with composer, model pickers and the Ask, Cross-check, Read steps"> | <img src="docs/images/settings-models.png" alt="Settings Models page with provider connection cards and model pickers"> |
+| <img src=".github/images/new-question.png" alt="New question screen with composer, model pickers and the Ask, Cross-check, Read steps"> | <img src=".github/images/settings-models.png" alt="Settings Models page with provider connection cards and model pickers"> |
 | **Dark mode.** Follows the system or a setting. | **Mobile.** Same session, one column, drawer for history. |
-| <img src="docs/images/session-dark.png" alt="Session view in dark mode"> | <img src="docs/images/mobile.png" alt="Session view on a phone" width="300"> |
+| <img src=".github/images/session-dark.png" alt="Session view in dark mode"> | <img src=".github/images/mobile.png" alt="Session view on a phone" width="300"> |
 
 ## Run locally
 
@@ -242,7 +242,7 @@ extra trusted hop, which is not supported. See `deploy/README.md` for more detai
 - **SQLite has no database roles.** All access control is in the application. If you need
   database-level isolation, plan a migration to Postgres.
 
-Details: [docs/API.md](docs/API.md) and [tests/security/README.md](tests/security/README.md).
+Details: [tests/security/README.md](tests/security/README.md).
 
 ## Data & privacy
 
@@ -260,7 +260,6 @@ hindbrain crosscheck is free and has no paid plan. If it saved you a round of
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Run `pnpm check` before opening a pull request.
-Design conventions, including the brand lockup, are in [docs/DESIGN.md](docs/DESIGN.md).
 
 ## License
 

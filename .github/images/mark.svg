@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+  <clipPath id="cc-back" clip-rule="evenodd"><path clip-rule="evenodd" d="M0 0H24V24H0ZM12.5 7.5H16.5A5 5 0 0 1 21.5 12.5V16.5A5 5 0 0 1 16.5 21.5H12.5A5 5 0 0 1 7.5 16.5V12.5A5 5 0 0 1 12.5 7.5Z"/></clipPath>
+  <rect x="2.5" y="2.5" width="14" height="14" rx="5" fill="none" stroke="currentColor" stroke-width="2" clip-path="url(#cc-back)"/>
+  <path fill-rule="evenodd" d="M12.5 7.5H16.5A5 5 0 0 1 21.5 12.5V16.5A5 5 0 0 1 16.5 21.5H12.5A5 5 0 0 1 7.5 16.5V12.5A5 5 0 0 1 12.5 7.5ZM10.551 15.216L12.701 17.316A1 1 0 0 0 14.103 17.311L18.453 13.011A1 1 0 0 0 17.047 11.589L13.396 15.198L11.949 13.785A1 1 0 0 0 10.551 15.216Z"/>
+</svg>

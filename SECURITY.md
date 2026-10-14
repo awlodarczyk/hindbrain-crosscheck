@@ -23,5 +23,4 @@ project, so these are targets, not guarantees.
 ## Scope
 
 Auth and sessions, rate limiting, CSRF/CSP, Markdown sanitising, provider key storage and
-anything that exposes data across users. The security model is described in the README and
-`docs/ARCHITECTURE.md`; the suite is `pnpm test:security`.
+anything that exposes data across users. The security model is described in the README; the suite is `pnpm test:security`.

@@ -20,3 +20,7 @@ data-e2e-live/
 .next-hosted/
 .next-*/
 tests/visual/
+docs/
+designs/
+.cursor/
+.claude/

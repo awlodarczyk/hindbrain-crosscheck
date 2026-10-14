@@ -1,8 +1,5 @@
 # Contributing
 
-Start with [docs/CONTEXT.md](docs/CONTEXT.md) (glossary, repo map, where things live) and
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-
 ## Setup
 
 - Node.js 22 or newer (see `.nvmrc`) and `corepack enable` (provides the pinned pnpm).
@@ -47,13 +44,7 @@ request descriptions. Comments in code describe what the code is, not its histor
    `lib/providers/registry.ts` and `lib/providers/transports.ts`.
 3. Add fixtures under `tests/fixtures/` and a unit test next to the module; CLI transports
    go through `lib/providers/cli-runner.ts` and are tested with `tests/helpers/fake-spawn.ts`.
-4. Update `docs/ARCHITECTURE.md` and the README if users see a new option.
-
-## Adding an ADR
-
-Copy the newest file in `docs/adr/`, take the next number, keep it to Context, Decision and
-Consequences, and add a row to `docs/adr/README.md`. Reference it from `docs/ARCHITECTURE.md`
-when it changes the architecture.
+4. Update the README if users see a new option.
 
 ## Reporting security issues
 
