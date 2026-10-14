@@ -11,7 +11,7 @@ for a small team behind a login.
 
 Part of the hindbrain family (sibling of hindbrain reflex). Formerly FactCheck Duo 2.0.
 
-<!-- screenshot: docs/images/session-light.png -->
+<img src="docs/images/session-light.png" alt="Session view: Claude and ChatGPT answers side by side with claims checked, supported and disputed counts" width="100%">
 
 ## How it works
 
@@ -23,6 +23,17 @@ Part of the hindbrain family (sibling of hindbrain reflex). Formerly FactCheck D
 
 Two models agreeing is not proof. Both can be wrong in the same way. Open the sources and
 read them, especially for medical, legal or financial topics.
+
+## Screenshots
+
+| | |
+|---|---|
+| **Cross-check.** Every claim with its verdict, the model that checked it and the source it used. | **Sources.** Every link both models cited, tagged by which answer or review used it. |
+| <img src="docs/images/cross-check.png" alt="Cross-check tab: claims table with verdict, claim text, checked by, source"> | <img src="docs/images/sources.png" alt="Sources tab: list of cited domains and URLs with Claude answer, ChatGPT answer and review tags"> |
+| **New question.** Pick models and a search budget, or paste two existing answers. | **Settings · Models.** Claude Code CLI or API key per provider, answer and verification models, reasoning effort. |
+| <img src="docs/images/new-question.png" alt="New question screen with composer, model pickers and the Ask, Cross-check, Read steps"> | <img src="docs/images/settings-models.png" alt="Settings Models page with provider connection cards and model pickers"> |
+| **Dark mode.** Follows the system or a setting. | **Mobile.** Same session, one column, drawer for history. |
+| <img src="docs/images/session-dark.png" alt="Session view in dark mode"> | <img src="docs/images/mobile.png" alt="Session view on a phone" width="300"> |
 
 ## Run locally
 
