@@ -12,8 +12,12 @@ const IGNORED_DIRS = new Set([
   "node-compile-cache",
 ]);
 
-describe.skipIf(!existsSync(join(root, "docs")))("repo docs", () => {
-  const adrFiles = readdirSync(join(root, "docs/adr")).filter((f) => /^\d{4}-.*\.md$/.test(f));
+const hasDocs = existsSync(join(root, "docs/adr"));
+
+describe.skipIf(!hasDocs)("repo docs", () => {
+  const adrFiles = hasDocs
+    ? readdirSync(join(root, "docs/adr")).filter((f) => /^\d{4}-.*\.md$/.test(f))
+    : [];
 
   it("has a file for every ADR number referenced in ARCHITECTURE.md", () => {
     const refs = [...read("docs/ARCHITECTURE.md").matchAll(/ADR[- ]?(\d{1,4})/g)].map((m) =>
