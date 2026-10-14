@@ -26,6 +26,22 @@ Part of the hindbrain family (sibling of hindbrain reflex). Formerly FactCheck D
 Two models agreeing is not proof. Both can be wrong in the same way. Open the sources and
 read them, especially for medical, legal or financial topics.
 
+### Import a transcript
+
+Pick "Import a transcript" on the New question screen to check a whole chat conversation.
+
+- **Input.** Paste plain text, a ChatGPT export (a `conversations.json` item or a shared-link
+  JSON) or a Claude export. You can also load a `.txt`, `.md` or `.json` file. Exports are
+  turned into `User:` / `Assistant:` turns; anything else stays as plain text.
+- **Focus.** Optionally say what the models should focus on. Without one they ask which
+  claims in the conversation hold up.
+- **Limit.** 200,000 characters after conversion.
+- **Checks.** Each model challenges the conversation: it lists the assistant's claims,
+  verifies them with web search, flags unsupported conclusions and omissions, and gives a
+  corrected assessment. Then each analysis is reviewed by the other model, claim by claim.
+- **Follow-ups.** The session shows the transcript as labelled turns. The composer asks a
+  follow-up focus question about the same transcript and starts a new session.
+
 ## Screenshots
 
 |                                                                                                                                         |                                                                                                                                             |
@@ -36,6 +52,8 @@ read them, especially for medical, legal or financial topics.
 | <img src=".github/images/new-question.png" alt="New question screen with composer, model pickers and the Ask, Cross-check, Read steps"> | <img src=".github/images/settings-models.png" alt="Settings Models page with provider connection cards and model pickers">                  |
 | **Dark mode.** Follows the system or a setting.                                                                                         | **Mobile.** Same session, one column, drawer for history.                                                                                   |
 | <img src=".github/images/session-dark.png" alt="Session view in dark mode">                                                             | <img src=".github/images/mobile.png" alt="Session view on a phone" width="300">                                                             |
+| **Import a transcript.** The conversation as labelled turns, both models' challenges and the cross-review.                              |                                                                                                                                             |
+| <img src=".github/images/transcript.png" alt="Transcript session: imported conversation panel open above the cross-check">              |                                                                                                                                             |
 
 ## Run locally
 
