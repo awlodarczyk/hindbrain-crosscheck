@@ -77,7 +77,8 @@ describe("Composer", () => {
       ],
     });
     const field = screen.getByLabelText("Chat transcript");
-    fireEvent.change(field, { target: { value: exportJson } });
+    await userEvent.click(field);
+    await userEvent.paste(exportJson);
     expect(field).toHaveValue("User: Q?\n\nAssistant: A.");
     await userEvent.click(ask());
     await waitFor(() =>

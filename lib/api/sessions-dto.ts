@@ -12,6 +12,7 @@ import { normalizeTranscript } from "@/lib/transcript/normalize";
 const modelOverride = z.object({ answerModel: z.string().optional() }).partial().optional();
 
 export const TRANSCRIPT_MAX = 200_000;
+export const TRANSCRIPT_RAW_MAX = 500_000;
 
 const CreateSessionSchema = z
   .object({
@@ -19,6 +20,7 @@ const CreateSessionSchema = z
     mode: z.enum(["ask", "paste", "transcript"]).default("ask"),
     transcript: z
       .string()
+      .max(TRANSCRIPT_RAW_MAX)
       .transform((s) => normalizeTranscript(s).text)
       .pipe(z.string().trim().max(TRANSCRIPT_MAX))
       .optional(),

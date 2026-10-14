@@ -39,13 +39,17 @@ function firstConversation(json: unknown): unknown {
   return Array.isArray(json) ? json[0] : json;
 }
 
+function nodeAt(mapping: Nodes, id: string): Nodes[string] | undefined {
+  return Object.hasOwn(mapping, id) ? mapping[id] : undefined;
+}
+
 function pathToRoot(mapping: Nodes, endId: string): readonly string[] {
   const ids: string[] = [];
   const seen = new Set<string>();
-  for (let id: string | null | undefined = endId; id && mapping[id] && !seen.has(id);) {
+  for (let id: string | null | undefined = endId; id && nodeAt(mapping, id) && !seen.has(id);) {
     seen.add(id);
     ids.push(id);
-    id = mapping[id]?.parent;
+    id = nodeAt(mapping, id)?.parent;
   }
   return ids.reverse();
 }
@@ -77,7 +81,7 @@ export function parseChatGptExport(json: unknown): Turn[] | null {
   const parsed = ChatGptConversation.safeParse(firstConversation(json));
   if (!parsed.success) return null;
   const { mapping, current_node } = parsed.data;
-  const end = current_node && mapping[current_node] ? current_node : deepestLeaf(mapping);
+  const end = current_node && nodeAt(mapping, current_node) ? current_node : deepestLeaf(mapping);
   if (!end) return null;
   const turns = pathToRoot(mapping, end).flatMap((id) => nodeToTurn(mapping[id]) ?? []);
   return turns.length > 0 ? turns : null;

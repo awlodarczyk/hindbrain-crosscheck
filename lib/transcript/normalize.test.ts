@@ -35,6 +35,39 @@ describe("normalizeTranscript", () => {
     const out = normalizeTranscript(JSON.stringify({ ...gpt, current_node: null }));
     expect(out).toEqual({ format: "chatgpt", text: EXPECTED });
   });
+  it("never resolves prototype members as nodes", () => {
+    const [gpt] = JSON.parse(fixture("chatgpt-export")) as Record<string, unknown>[];
+    for (const current_node of ["constructor", "toString"]) {
+      const raw = JSON.stringify({ ...gpt, current_node });
+      expect(normalizeTranscript(raw).text).toBe(EXPECTED);
+    }
+    const orphan = { mapping: { a: { parent: "constructor", children: [] } }, current_node: "a" };
+    const raw = JSON.stringify(orphan);
+    expect(normalizeTranscript(raw)).toEqual({ format: "plain", text: raw });
+  });
+  it("terminates on a parent cycle", () => {
+    const user = (parent: string) => ({
+      parent,
+      children: [],
+      message: { author: { role: "user" }, content: { content_type: "text", parts: ["hi"] } },
+    });
+    const raw = JSON.stringify({ mapping: { a: user("b"), b: user("a") }, current_node: "a" });
+    expect(normalizeTranscript(raw).text).toBe("User: hi\n\nUser: hi");
+  });
+  it("uses the first conversation of several", () => {
+    const [first] = JSON.parse(fixture("claude-export")) as unknown[];
+    const second = { chat_messages: [{ sender: "human", text: "other" }] };
+    expect(normalizeTranscript(JSON.stringify([first, second])).text).toBe(EXPECTED);
+  });
+  it("treats an empty chat_messages array and missing parents as plain or safe", () => {
+    const empty = JSON.stringify([{ chat_messages: [] }]);
+    expect(normalizeTranscript(empty).format).toBe("plain");
+    const dangling = JSON.stringify({
+      mapping: { a: { parent: "missing", children: [], message: null } },
+      current_node: "a",
+    });
+    expect(normalizeTranscript(dangling).format).toBe("plain");
+  });
   it("returns plain text untouched", () => {
     const raw = "User: hi\nAssistant: hello";
     expect(normalizeTranscript(raw)).toEqual({ format: "plain", text: raw });

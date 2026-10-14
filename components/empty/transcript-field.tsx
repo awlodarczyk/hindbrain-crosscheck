@@ -1,5 +1,6 @@
 "use client";
 
+import type { ClipboardEvent } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { TRANSCRIPT_MAX } from "@/lib/api/sessions-dto";
 import { normalizeTranscript } from "@/lib/transcript/normalize";
@@ -13,6 +14,12 @@ export function TranscriptField({
   onChange: (v: string) => void;
 }) {
   const accept = (raw: string) => onChange(normalizeTranscript(raw).text.slice(0, TRANSCRIPT_MAX));
+  function paste(e: ClipboardEvent<HTMLTextAreaElement>) {
+    e.preventDefault();
+    const { value: current, selectionStart, selectionEnd } = e.currentTarget;
+    const pasted = e.clipboardData.getData("text");
+    accept(current.slice(0, selectionStart) + pasted + current.slice(selectionEnd));
+  }
   async function pick(file: File | undefined) {
     if (file) accept(await file.text());
   }
@@ -25,7 +32,8 @@ export function TranscriptField({
         id="transcript"
         rows={10}
         value={value}
-        onChange={(e) => accept(e.target.value)}
+        onChange={(e) => onChange(e.target.value.slice(0, TRANSCRIPT_MAX))}
+        onPaste={paste}
         placeholder="Paste the whole conversation here (user and assistant turns, any format)"
         className="text-[13px]"
       />

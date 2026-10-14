@@ -23,6 +23,13 @@ describe("CreateSessionBody", () => {
       "User: Q?\n\nAssistant: A.",
     );
   });
+  it("rejects a raw transcript over the raw cap even if it would normalise small", () => {
+    const transcript = JSON.stringify({
+      padding: "x".repeat(500_001),
+      chat_messages: [{ sender: "human", text: "Q?" }],
+    });
+    expect(CreateSessionBody.safeParse({ mode: "transcript", transcript }).success).toBe(false);
+  });
   it("still rejects an oversized plain transcript", () => {
     expect(
       CreateSessionBody.safeParse({ mode: "transcript", transcript: "x".repeat(200_001) }).success,
