@@ -241,6 +241,11 @@ Details: [docs/API.md](docs/API.md) and [tests/security/README.md](tests/securit
   configured, including their web searches.
 - No telemetry, no analytics, no CDN. Fonts are self-hosted.
 
+## Support
+
+hindbrain crosscheck is free and has no paid plan. If it saved you a round of
+"but the model said so", you can [buy me a coffee](https://buycoffee.to/hindbrain).
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Run `pnpm check` before opening a pull request.
