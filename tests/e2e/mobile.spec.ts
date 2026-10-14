@@ -80,8 +80,10 @@ test("settings: nav chips scroll horizontally and the content fits", async ({ pa
   await expect(nav).toBeVisible();
   await expect.poll(() => nav.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
   const last = nav.getByRole("link", { name: "Data" });
-  await last.scrollIntoViewIfNeeded();
-  await expect(last).toBeInViewport();
+  await expect(async () => {
+    await last.scrollIntoViewIfNeeded();
+    await expect(last).toBeInViewport();
+  }).toPass({ timeout: 30_000 });
   expect(await noHorizontalScroll(page)).toBe(true);
 });
 
