@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { SettingsSchema } from "@/lib/settings/schema";
 import { makeView } from "@/components/empty/view-fixture";
 import { Composer, type ComposerProps } from "./composer";
@@ -23,6 +23,8 @@ const box = () => screen.getByRole("textbox", { name: "Question" });
 const ask = () => screen.getByRole("button", { name: /Ask & cross-check/ });
 
 describe("Composer", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   it("submits the trimmed question on Meta+Enter", async () => {
     const onSubmit = setup();
     await userEvent.type(box(), "  why?  ");
@@ -189,7 +191,6 @@ describe("Composer", () => {
         transcript: "U: hi",
       }),
     );
-    vi.unstubAllGlobals();
   });
 
   it("docked without a follow-up transcript stays an ask", async () => {
@@ -231,6 +232,5 @@ describe("Composer", () => {
     expect(send).toHaveClass("size-11", "rounded-full");
     await userEvent.click(send);
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
-    vi.unstubAllGlobals();
   });
 });
