@@ -9,7 +9,7 @@ search. Then each model cross-checks the other's answer claim by claim, citing s
 Every session is kept in a sidebar history. It runs locally on your machine, or hosted
 for a small team behind a login.
 
-Part of the hindbrain family (sibling of hindbrain reflex). Formerly FactCheck Duo 2.0.
+Part of the hindbrain family (sibling of hindbrain reflex).
 
 <img src=".github/images/session-light.png" alt="Session view: Claude and ChatGPT answers side by side with claims checked, supported and disputed counts" width="100%">
 

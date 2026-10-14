@@ -38,7 +38,14 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm format:check
+      - name: Format check
+        run: |
+          if ! pnpm format:check > "$RUNNER_TEMP/prettier.log" 2>&1; then
+            { echo '### Prettier'; echo '```'; head -80 "$RUNNER_TEMP/prettier.log"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+            cat "$RUNNER_TEMP/prettier.log"
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/prettier.log"
 
       - run: pnpm lint
 
