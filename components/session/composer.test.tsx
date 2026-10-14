@@ -138,6 +138,28 @@ describe("Composer", () => {
     expect(box()).toHaveAttribute("placeholder", "Ask a new question…");
   });
 
+  it("docked follow-up on a transcript session sends the stored transcript", async () => {
+    const onSubmit = setup({ variant: "docked", followUpTranscript: "U: hi" });
+    expect(box()).toHaveAttribute("placeholder", "Ask a follow-up about this transcript…");
+    await userEvent.type(box(), "why?");
+    fireEvent.keyDown(box(), { key: "Enter", metaKey: true });
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith({
+        question: "why?",
+        mode: "transcript",
+        transcript: "U: hi",
+      }),
+    );
+  });
+
+  it("docked without a follow-up transcript stays an ask", async () => {
+    const onSubmit = setup({ variant: "docked" });
+    expect(box()).toHaveAttribute("placeholder", "Ask a new question…");
+    await userEvent.type(box(), "why?");
+    fireEvent.keyDown(box(), { key: "Enter", metaKey: true });
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({ question: "why?", mode: "ask" }));
+  });
+
   it("keeps the running placeholder while disabled", () => {
     setup({ variant: "docked", disabled: true, disabledPlaceholder: "Running… wait" });
     expect(box()).toHaveAttribute("placeholder", "Running… wait");

@@ -35,12 +35,15 @@ export type ComposerProps = {
   disabledPlaceholder?: string;
   busy?: boolean;
   mode?: SessionMode;
+  /** Stored transcript of the current session; when set, the docked composer asks follow-ups about it. */
+  followUpTranscript?: string | null;
   onSubmit: (input: ComposerSubmit) => Promise<void>;
 };
 
 const PROVIDERS: readonly ProviderId[] = ["claude", "chatgpt"];
 const PLACEHOLDER = "e.g. Does static stretching before training reduce injury risk?";
 const DOCKED_PLACEHOLDER = "Ask a new question…";
+const FOLLOW_UP_PLACEHOLDER = "Ask a follow-up about this transcript…";
 const TRANSCRIPT_PLACEHOLDER = "What should the models focus on? (optional)";
 const MAX_ROWS = 8;
 const LINE_PX = 21;
@@ -69,6 +72,7 @@ export function Composer(props: ComposerProps) {
     disabledPlaceholder,
     busy,
     mode = "ask",
+    followUpTranscript,
     onSubmit,
   } = props;
   const docked = variant === "docked";
@@ -85,6 +89,7 @@ export function Composer(props: ComposerProps) {
 
   const paste = mode === "paste" && !docked;
   const imported = mode === "transcript" && !docked;
+  const followUp = docked && followUpTranscript ? followUpTranscript : null;
   const hasPaste = pasted.claude.trim() !== "" || pasted.chatgpt.trim() !== "";
   const ready = imported
     ? transcript.trim() !== ""
@@ -118,7 +123,8 @@ export function Composer(props: ComposerProps) {
     };
     return {
       question: question.trim(),
-      mode: paste ? "paste" : imported ? "transcript" : "ask",
+      mode: paste ? "paste" : imported || followUp ? "transcript" : "ask",
+      ...(followUp ? { transcript: followUp } : {}),
       ...(paste ? { pasted: pastedPayload(pasted) } : {}),
       ...(imported ? { transcript: transcript.trim() } : {}),
       ...(Object.keys(overrides).length ? { overrides } : {}),
@@ -176,7 +182,9 @@ export function Composer(props: ComposerProps) {
     disabled && disabledPlaceholder
       ? disabledPlaceholder
       : docked
-        ? DOCKED_PLACEHOLDER
+        ? followUp
+          ? FOLLOW_UP_PLACEHOLDER
+          : DOCKED_PLACEHOLDER
         : imported
           ? TRANSCRIPT_PLACEHOLDER
           : PLACEHOLDER;
