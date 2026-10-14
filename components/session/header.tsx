@@ -1,6 +1,8 @@
 import { CircleAlert, CircleCheck, ListChecks } from "lucide-react";
 import type { Session } from "@/lib/repos/types";
+import { Badge } from "@/components/ui/badge";
 import { StatTile } from "./stat-tile";
+import { TranscriptView } from "./transcript-view";
 
 /** Meta line, question heading and the three stat tiles. */
 export function SessionHeader({ session, meta }: { session: Session; meta: string }) {
@@ -8,9 +10,15 @@ export function SessionHeader({ session, meta }: { session: Session; meta: strin
   const n = (v: number) => (pending ? null : v);
   return (
     <div className="flex flex-col gap-3">
-      <p suppressHydrationWarning className="break-words font-mono text-[12px] text-text-secondary">
-        {meta}
-      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <p
+          suppressHydrationWarning
+          className="min-w-0 break-words font-mono text-[12px] text-text-secondary"
+        >
+          {meta}
+        </p>
+        {session.mode === "transcript" && <Badge>Transcript</Badge>}
+      </div>
       <h1 className="text-xl font-semibold md:text-2xl text-text-primary">
         {session.title ?? session.question}
       </h1>
@@ -19,9 +27,7 @@ export function SessionHeader({ session, meta }: { session: Session; meta: strin
           <summary className="cursor-pointer px-4 py-2 font-medium text-text-secondary">
             Imported transcript · focus: {session.question}
           </summary>
-          <pre className="max-h-80 overflow-auto whitespace-pre-wrap border-t border-border-default px-4 py-3 font-sans text-[13px] text-text-primary">
-            {session.transcript}
-          </pre>
+          <TranscriptView text={session.transcript} />
         </details>
       )}
       <div className="flex gap-2">
