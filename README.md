@@ -2,7 +2,7 @@
 
 # hindbrain crosscheck
 
-[![CI](https://github.com/hindbrain/hindbrain-crosscheck/actions/workflows/ci.yml/badge.svg)](https://github.com/hindbrain/hindbrain-crosscheck/actions/workflows/ci.yml)
+[![CI](https://github.com/awlodarczyk/hindbrain-crosscheck/actions/workflows/ci.yml/badge.svg)](https://github.com/awlodarczyk/hindbrain-crosscheck/actions/workflows/ci.yml)
 
 Ask one question and get two answers, one from Claude and one from ChatGPT, both with web
 search. Then each model cross-checks the other's answer claim by claim, citing sources.
