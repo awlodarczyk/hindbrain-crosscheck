@@ -33,11 +33,14 @@ describe("normalizeTranscript", () => {
   it("picks the deepest leaf when current_node is missing", () => {
     const [gpt] = JSON.parse(fixture("chatgpt-export")) as Record<string, unknown>[];
     const out = normalizeTranscript(JSON.stringify({ ...gpt, current_node: null }));
-    expect(out.format).toBe("chatgpt");
-    expect(out.text).toContain("User: Does stretching prevent injuries?");
+    expect(out).toEqual({ format: "chatgpt", text: EXPECTED });
   });
   it("returns plain text untouched", () => {
     const raw = "User: hi\nAssistant: hello";
+    expect(normalizeTranscript(raw)).toEqual({ format: "plain", text: raw });
+  });
+  it("returns text that does not start with a JSON bracket as plain", () => {
+    const raw = '  Assistant: {"chat_messages":[]}';
     expect(normalizeTranscript(raw)).toEqual({ format: "plain", text: raw });
   });
   it("treats JSON of unknown shape, empty mapping and invalid JSON as plain", () => {

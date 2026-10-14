@@ -2,6 +2,7 @@
 
 import { Textarea } from "@/components/ui/textarea";
 import { TRANSCRIPT_MAX } from "@/lib/api/sessions-dto";
+import { normalizeTranscript } from "@/lib/transcript/normalize";
 
 /** One transcript textarea with a character counter and a text/JSON file picker. */
 export function TranscriptField({
@@ -11,8 +12,9 @@ export function TranscriptField({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const accept = (raw: string) => onChange(normalizeTranscript(raw).text.slice(0, TRANSCRIPT_MAX));
   async function pick(file: File | undefined) {
-    if (file) onChange((await file.text()).slice(0, TRANSCRIPT_MAX));
+    if (file) accept(await file.text());
   }
   return (
     <div className="flex flex-col gap-1 px-4 pb-3">
@@ -22,9 +24,8 @@ export function TranscriptField({
       <Textarea
         id="transcript"
         rows={10}
-        maxLength={TRANSCRIPT_MAX}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => accept(e.target.value)}
         placeholder="Paste the whole conversation here (user and assistant turns, any format)"
         className="text-[13px]"
       />

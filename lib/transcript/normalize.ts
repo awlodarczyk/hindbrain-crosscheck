@@ -114,6 +114,7 @@ function tryParseJson(raw: string): unknown {
 
 /** Converts a ChatGPT or Claude export JSON string into plain turns; any other input is returned unchanged as `plain`. */
 export function normalizeTranscript(raw: string): { text: string; format: TranscriptFormat } {
+  if (!/^\s*[{[]/.test(raw)) return { format: "plain", text: raw };
   const json = tryParseJson(raw);
   const detected: readonly [Exclude<TranscriptFormat, "plain">, Turn[] | null][] =
     json === undefined

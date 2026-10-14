@@ -68,6 +68,27 @@ describe("Composer", () => {
     );
   });
 
+  it("transcript mode turns a pasted Claude export into turns and submits them", async () => {
+    const onSubmit = setup({ mode: "transcript" });
+    const exportJson = JSON.stringify({
+      chat_messages: [
+        { sender: "human", text: "Q?" },
+        { sender: "assistant", text: "A." },
+      ],
+    });
+    const field = screen.getByLabelText("Chat transcript");
+    fireEvent.change(field, { target: { value: exportJson } });
+    expect(field).toHaveValue("User: Q?\n\nAssistant: A.");
+    await userEvent.click(ask());
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith({
+        question: "",
+        mode: "transcript",
+        transcript: "User: Q?\n\nAssistant: A.",
+      }),
+    );
+  });
+
   it("clamps searches to 0-20 and emits the override", async () => {
     const onSubmit = setup();
     const n = screen.getByRole("spinbutton", { name: "Max searches" });
