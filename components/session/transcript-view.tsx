@@ -5,7 +5,7 @@ import { splitTurns } from "@/lib/transcript/turns";
 /** Scrollable list of imported-conversation turns with role labels; bodies render as plain text. */
 export function TranscriptView({ text }: { text: string }) {
   return (
-    <dl className="max-h-80 overflow-auto break-words border-t border-border-default">
+    <dl className="max-h-[60vh] overflow-auto md:max-h-80 break-words border-t border-border-default">
       {splitTurns(text).map((turn, i) => (
         <div key={i} className={cn("px-4 py-2", turn.role === "user" && "bg-bg-subtle")}>
           {turn.role !== "other" && (
