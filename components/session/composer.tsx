@@ -35,12 +35,15 @@ export type ComposerProps = {
   disabledPlaceholder?: string;
   busy?: boolean;
   mode?: SessionMode;
+  /** Stored transcript of the current session; when set, the docked composer asks follow-ups about it. */
+  followUpTranscript?: string | null;
   onSubmit: (input: ComposerSubmit) => Promise<void>;
 };
 
 const PROVIDERS: readonly ProviderId[] = ["claude", "chatgpt"];
 const PLACEHOLDER = "e.g. Does static stretching before training reduce injury risk?";
 const DOCKED_PLACEHOLDER = "Ask a new question…";
+const FOLLOW_UP_PLACEHOLDER = "Ask a follow-up about this transcript…";
 const TRANSCRIPT_PLACEHOLDER = "What should the models focus on? (optional)";
 const MAX_ROWS = 8;
 const LINE_PX = 21;
@@ -58,6 +61,19 @@ function useAutoGrow(
   }, [ref, value, rows]);
 }
 
+type ModeFlags = { imported: boolean; followUp: boolean };
+
+/** Session mode a submit creates for the composer's current state. */
+function deriveMode({ paste, imported, followUp }: ModeFlags & { paste: boolean }): SessionMode {
+  if (paste) return "paste";
+  return imported || followUp ? "transcript" : "ask";
+}
+
+function placeholderFor({ docked, imported, followUp }: ModeFlags & { docked: boolean }): string {
+  if (docked) return followUp ? FOLLOW_UP_PLACEHOLDER : DOCKED_PLACEHOLDER;
+  return imported ? TRANSCRIPT_PLACEHOLDER : PLACEHOLDER;
+}
+
 /** Question input with model/search chips and a submit button; `centered` is the 720 px card, `docked` a single row. */
 export function Composer(props: ComposerProps) {
   const {
@@ -69,6 +85,7 @@ export function Composer(props: ComposerProps) {
     disabledPlaceholder,
     busy,
     mode = "ask",
+    followUpTranscript,
     onSubmit,
   } = props;
   const docked = variant === "docked";
@@ -85,6 +102,7 @@ export function Composer(props: ComposerProps) {
 
   const paste = mode === "paste" && !docked;
   const imported = mode === "transcript" && !docked;
+  const followUp = (docked && followUpTranscript?.trim()) || null;
   const hasPaste = pasted.claude.trim() !== "" || pasted.chatgpt.trim() !== "";
   const ready = imported
     ? transcript.trim() !== ""
@@ -116,11 +134,12 @@ export function Composer(props: ComposerProps) {
       ...(Object.keys(providers).length ? { providers } : {}),
       ...(cost ? { cost } : {}),
     };
+    const derived = deriveMode({ paste, imported, followUp: followUp !== null });
     return {
       question: question.trim(),
-      mode: paste ? "paste" : imported ? "transcript" : "ask",
+      mode: derived,
       ...(paste ? { pasted: pastedPayload(pasted) } : {}),
-      ...(imported ? { transcript: transcript.trim() } : {}),
+      ...(derived === "transcript" ? { transcript: followUp ?? transcript.trim() } : {}),
       ...(Object.keys(overrides).length ? { overrides } : {}),
     };
   }
@@ -175,11 +194,7 @@ export function Composer(props: ComposerProps) {
   const placeholder =
     disabled && disabledPlaceholder
       ? disabledPlaceholder
-      : docked
-        ? DOCKED_PLACEHOLDER
-        : imported
-          ? TRANSCRIPT_PLACEHOLDER
-          : PLACEHOLDER;
+      : placeholderFor({ docked, imported, followUp: followUp !== null });
 
   const input = (
     <textarea

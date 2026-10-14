@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { SettingsSchema } from "@/lib/settings/schema";
 import { makeView } from "@/components/empty/view-fixture";
 import { Composer, type ComposerProps } from "./composer";
@@ -23,6 +23,8 @@ const box = () => screen.getByRole("textbox", { name: "Question" });
 const ask = () => screen.getByRole("button", { name: /Ask & cross-check/ });
 
 describe("Composer", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   it("submits the trimmed question on Meta+Enter", async () => {
     const onSubmit = setup();
     await userEvent.type(box(), "  why?  ");
@@ -138,6 +140,67 @@ describe("Composer", () => {
     expect(box()).toHaveAttribute("placeholder", "Ask a new question…");
   });
 
+  it("docked follow-up on a transcript session sends the stored transcript", async () => {
+    const onSubmit = setup({ variant: "docked", followUpTranscript: "U: hi" });
+    expect(box()).toHaveAttribute("placeholder", "Ask a follow-up about this transcript…");
+    await userEvent.type(box(), "why?");
+    fireEvent.keyDown(box(), { key: "Enter", metaKey: true });
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith({
+        question: "why?",
+        mode: "transcript",
+        transcript: "U: hi",
+      }),
+    );
+  });
+
+  it("follow-up payload carries overrides", async () => {
+    const onSubmit = setup({ variant: "docked", followUpTranscript: "U: hi" });
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Max searches" }), {
+      target: { value: "3" },
+    });
+    await userEvent.type(box(), "q");
+    fireEvent.keyDown(box(), { key: "Enter", metaKey: true });
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith({
+        question: "q",
+        mode: "transcript",
+        transcript: "U: hi",
+        overrides: { cost: { maxSearchesPerCall: 3 } },
+      }),
+    );
+  });
+
+  it("compact docked follow-up shows the placeholder and submits the transcript", async () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockReturnValue({
+        matches: true,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
+    );
+    const onSubmit = setup({ variant: "docked", followUpTranscript: "U: hi" });
+    expect(box()).toHaveAttribute("placeholder", "Ask a follow-up about this transcript…");
+    await userEvent.type(box(), "q");
+    await userEvent.click(ask());
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith({
+        question: "q",
+        mode: "transcript",
+        transcript: "U: hi",
+      }),
+    );
+  });
+
+  it("docked without a follow-up transcript stays an ask", async () => {
+    const onSubmit = setup({ variant: "docked" });
+    expect(box()).toHaveAttribute("placeholder", "Ask a new question…");
+    await userEvent.type(box(), "why?");
+    fireEvent.keyDown(box(), { key: "Enter", metaKey: true });
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({ question: "why?", mode: "ask" }));
+  });
+
   it("keeps the running placeholder while disabled", () => {
     setup({ variant: "docked", disabled: true, disabledPlaceholder: "Running… wait" });
     expect(box()).toHaveAttribute("placeholder", "Running… wait");
@@ -169,6 +232,5 @@ describe("Composer", () => {
     expect(send).toHaveClass("size-11", "rounded-full");
     await userEvent.click(send);
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
-    vi.unstubAllGlobals();
   });
 });

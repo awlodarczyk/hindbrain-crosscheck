@@ -129,6 +129,7 @@ export function SessionView({ initial, settings, models }: SessionViewProps) {
           disabled={busy}
           disabledLabel="Running…"
           disabledPlaceholder="Running… you can ask a new question when this one finishes"
+          followUpTranscript={session.transcript}
           onSubmit={ask}
         />
       </div>
