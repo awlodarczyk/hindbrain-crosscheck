@@ -17,6 +17,7 @@ export default defineConfig({
   workers: 1,
   timeout: 60_000,
   expect: { timeout: 10_000 },
+  reporter: process.env.CI ? [["list"], ["github"]] : "list",
   use: { baseURL, extraHTTPHeaders: { origin: baseURL } },
   webServer: [
     {
