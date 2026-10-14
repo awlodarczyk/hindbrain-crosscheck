@@ -103,7 +103,7 @@ test("transcript session: collapsed summary opens labelled turns without overflo
   await expect(page).toHaveURL(/\/s\/[\w-]+$/, { timeout: 30_000 });
   const summary = page.getByText("Imported transcript");
   await expect(summary).toBeVisible();
-  await expect(page.getByText("User", { exact: true })).toBeHidden();
+  await expect(page.locator("details")).not.toHaveAttribute("open");
   await summary.click();
   await expect(page.getByText("User", { exact: true })).toBeVisible();
   expect(await noHorizontalScroll(page)).toBe(true);

@@ -39,4 +39,18 @@ describe("splitTurns", () => {
     expect(splitTurns("User:\nAssistant: a\nUser:   ")).toEqual([{ role: "assistant", text: "a" }]);
     expect(splitTurns("  \n")).toEqual([]);
   });
+  it("does not split on mid-line labels", () => {
+    const body = "see the user: note\nI said assistant: no";
+    expect(splitTurns(`User: ${body}`)).toEqual([{ role: "user", text: body }]);
+  });
+  it("handles CRLF line endings", () => {
+    expect(splitTurns("User: a\r\nAssistant: b\r\n")).toEqual([
+      { role: "user", text: "a" },
+      { role: "assistant", text: "b" },
+    ]);
+    expect(splitTurns("User: a\r\nb\r\nAssistant: c")).toEqual([
+      { role: "user", text: "a\nb" },
+      { role: "assistant", text: "c" },
+    ]);
+  });
 });

@@ -1,3 +1,4 @@
+/** Speaker of a transcript turn. */
 export type TurnRole = "user" | "assistant";
 
 /** Display and export label for each turn role. */

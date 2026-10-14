@@ -13,7 +13,7 @@ export function SessionHeader({ session, meta }: { session: Session; meta: strin
       <div className="flex flex-wrap items-center gap-2">
         <p
           suppressHydrationWarning
-          className="break-words font-mono text-[12px] text-text-secondary"
+          className="min-w-0 break-words font-mono text-[12px] text-text-secondary"
         >
           {meta}
         </p>

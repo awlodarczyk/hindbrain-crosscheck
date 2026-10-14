@@ -63,7 +63,7 @@ export function HistoryRow({
               {item.question}
             </span>
             {item.mode === "transcript" && (
-              <Badge className="h-4 shrink-0 px-1 text-[10px]">Transcript</Badge>
+              <Badge className="h-4 shrink-0 px-1 text-[11px]">Transcript</Badge>
             )}
           </span>
           <span className="block truncate font-mono text-[11px] text-text-muted">

@@ -18,7 +18,7 @@ const LABEL_LINE = new RegExp(`^\\s*(${Object.keys(LABEL_ROLE).join("|")})\\s*:`
  */
 export function splitTurns(text: string): readonly ViewTurn[] {
   const turns: { role: ViewTurn["role"]; lines: string[] }[] = [{ role: "other", lines: [] }];
-  for (const line of text.split("\n")) {
+  for (const line of text.split(/\r?\n/)) {
     const match = LABEL_LINE.exec(line);
     const role = match ? LABEL_ROLE[match[1]!.toLowerCase()] : undefined;
     if (match && role) turns.push({ role, lines: [line.slice(match[0].length)] });
