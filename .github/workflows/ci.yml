@@ -42,6 +42,7 @@ jobs:
         run: |
           if ! pnpm format:check > "$RUNNER_TEMP/prettier.log" 2>&1; then
             { echo '### Prettier'; echo '```'; head -80 "$RUNNER_TEMP/prettier.log"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error title=prettier::$(head -40 "$RUNNER_TEMP/prettier.log" | tr '\n' ' ' | cut -c1-3500)"
             cat "$RUNNER_TEMP/prettier.log"
             exit 1
           fi
