@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Transcript mode: import a chat transcript (paste or load a .txt/.md file) with an optional focus question; both models challenge the conversation, verify the assistant's claims and review each other's analysis. The transcript is shown on the session page and included in search and export.
+
 ## 1.0.0 — 2026-10-13
 
 First release. Rebuild of the FactCheck Duo 2.0 prototype as a single Next.js app.
