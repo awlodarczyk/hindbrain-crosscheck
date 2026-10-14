@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { HistoryItem } from "@/components/shell/group-by-day";
 import type { Db } from "@/lib/db/client";
+import { TRANSCRIPT_DEFAULT_QUESTION } from "@/lib/pipeline/prompts";
 import { listCallsForSession } from "@/lib/repos/calls";
 import { listClaimsForCalls } from "@/lib/repos/claims";
 import { listRuns } from "@/lib/repos/runs";
@@ -9,10 +10,13 @@ import type { Call, Claim, Run, Session } from "@/lib/repos/types";
 
 const modelOverride = z.object({ answerModel: z.string().optional() }).partial().optional();
 
+export const TRANSCRIPT_MAX = 200_000;
+
 const CreateSessionSchema = z
   .object({
-    question: z.string().trim().min(1).max(8000),
-    mode: z.enum(["ask", "paste"]).default("ask"),
+    question: z.string().trim().max(8000).default(""),
+    mode: z.enum(["ask", "paste", "transcript"]).default("ask"),
+    transcript: z.string().trim().max(TRANSCRIPT_MAX).optional(),
     pasted: z
       .object({
         claude: z.string().max(200_000).optional(),
@@ -30,6 +34,12 @@ const CreateSessionSchema = z
       .optional(),
   })
   .superRefine((v, ctx) => {
+    if (v.mode === "transcript" && !v.transcript) {
+      ctx.addIssue({ code: "custom", path: ["transcript"], message: "Paste a transcript." });
+    }
+    if (v.mode !== "transcript" && v.question === "") {
+      ctx.addIssue({ code: "custom", path: ["question"], message: "Ask a question." });
+    }
     if (v.mode !== "paste") return;
     const any = [v.pasted?.claude, v.pasted?.chatgpt].some((t) => (t ?? "").trim() !== "");
     if (!any) {
@@ -39,7 +49,8 @@ const CreateSessionSchema = z
         message: "Paste at least one answer.",
       });
     }
-  });
+  })
+  .transform((v) => ({ ...v, question: v.question || TRANSCRIPT_DEFAULT_QUESTION }));
 export type CreateSessionInput = z.output<typeof CreateSessionSchema>;
 export const CreateSessionBody = CreateSessionSchema;
 

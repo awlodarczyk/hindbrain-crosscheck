@@ -11,7 +11,7 @@ import { logError } from "./call-rows";
 import { runColumn } from "./column";
 import type { EmitFn } from "./events";
 import { resolveModels } from "./resolve-models";
-import { loadSession, planFresh, planRetry } from "./run-plan";
+import { loadSession, planFresh, planRetry, type SessionRow } from "./run-plan";
 
 export type RunDeps = {
   db: Db;
@@ -68,9 +68,11 @@ function finalize(deps: RunDeps, sessionId: string, runId: string): RunOutcome {
 }
 
 /** Refreshes the full-text row so search finds the run's answers; failures are logged only. */
-function reindex(deps: RunDeps, question: string, sessionId: string): void {
+function reindex(deps: RunDeps, session: SessionRow, sessionId: string): void {
   try {
-    indexSession(deps.db, sessionId, question, answersTextForSession(deps.db, sessionId));
+    const answers = answersTextForSession(deps.db, sessionId);
+    const text = session.transcript ? `${session.transcript}\n\n${answers}` : answers;
+    indexSession(deps.db, sessionId, session.question, text);
   } catch (e) {
     logError("reindex", e);
   }
@@ -112,12 +114,12 @@ export async function runSession(
   }
   const column = {
     ...{ db, providers, settings: deps.settings, models, emit, now: deps.now },
-    ...{ sessionId, runId: run.id, question: session.question },
+    ...{ sessionId, runId: run.id, question: session.question, transcript: session.transcript },
     signal: deps.signal ?? new AbortController().signal,
   };
   await Promise.allSettled(plans.map((plan) => runColumn(column, plan)));
   const outcome = finalize(deps, sessionId, run.id);
-  reindex(deps, session.question, sessionId);
+  reindex(deps, session, sessionId);
   emit({ type: "session.done", sessionId, status: outcome.status, disputed: outcome.disputed });
   return outcome;
 }

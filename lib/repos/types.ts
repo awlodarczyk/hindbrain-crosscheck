@@ -40,6 +40,7 @@ export type Session = {
   id: string;
   userId: string;
   question: string;
+  transcript: string | null;
   title: string | null;
   mode: SessionMode;
   status: SessionStatus;

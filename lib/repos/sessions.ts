@@ -57,6 +57,7 @@ export function createSession(
     mode: SessionMode;
     settingsSnapshot: unknown;
     title?: string;
+    transcript?: string;
   },
   now: Now = defaultNow,
 ): Session {
@@ -67,6 +68,7 @@ export function createSession(
       id: ulid(),
       userId: input.userId,
       question: input.question,
+      transcript: input.transcript ?? null,
       title: input.title ?? null,
       mode: input.mode,
       status: "queued",

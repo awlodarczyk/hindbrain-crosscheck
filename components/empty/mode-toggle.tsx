@@ -1,14 +1,15 @@
 "use client";
 
 import { Segmented } from "@/components/ui/segmented";
+import type { SessionMode } from "@/lib/db/enums";
 
-/** Switches between asking both models and pasting existing answers. */
+/** Switches between asking both models, pasting existing answers and importing a transcript. */
 export function ModeToggle({
   value,
   onChange,
 }: {
-  value: "ask" | "paste";
-  onChange: (v: "ask" | "paste") => void;
+  value: SessionMode;
+  onChange: (v: SessionMode) => void;
 }) {
   return (
     <Segmented
@@ -18,6 +19,7 @@ export function ModeToggle({
       options={[
         { value: "ask", label: "Ask both models" },
         { value: "paste", label: "Paste existing answers" },
+        { value: "transcript", label: "Import a transcript" },
       ]}
     />
   );

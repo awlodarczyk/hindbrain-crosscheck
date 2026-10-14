@@ -53,6 +53,21 @@ describe("Composer", () => {
     );
   });
 
+  it("transcript mode needs only the transcript", async () => {
+    const onSubmit = setup({ mode: "transcript" });
+    expect(ask()).toBeDisabled();
+    await userEvent.type(screen.getByLabelText("Chat transcript"), " U: hi ");
+    expect(ask()).toBeEnabled();
+    await userEvent.click(ask());
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith({
+        question: "",
+        mode: "transcript",
+        transcript: "U: hi",
+      }),
+    );
+  });
+
   it("clamps searches to 0-20 and emits the override", async () => {
     const onSubmit = setup();
     const n = screen.getByRole("spinbutton", { name: "Max searches" });

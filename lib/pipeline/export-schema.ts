@@ -62,8 +62,9 @@ export const StatsExport = z
   .default({});
 export const SessionExport = z.object({
   question: z.string().min(1).max(8000),
+  transcript: z.string().max(200_000).nullable().default(null),
   title: z.string().nullable(),
-  mode: z.enum(["ask", "paste"]),
+  mode: z.enum(["ask", "paste", "transcript"]),
   status: z.enum(["queued", "running", "done", "partial", "failed"]),
   settingsSnapshot: z.unknown(),
   stats: StatsExport,
@@ -134,11 +135,13 @@ function exportCall(call: Call, attempt: number, claims: readonly Claim[]): Call
 }
 
 function exportSession(b: SessionBundle): ExportFile["sessions"][number] {
-  const { question, title, mode, status, settingsSnapshot, stats, createdAt, updatedAt } =
+  const { question, transcript, title, mode, status, settingsSnapshot, stats, createdAt } =
     b.session;
+  const { updatedAt } = b.session;
   const attemptOf = new Map(b.runs.map((r) => [r.id, r.attempt]));
   return {
     question,
+    transcript,
     title,
     mode,
     status,

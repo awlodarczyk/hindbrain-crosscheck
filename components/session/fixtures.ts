@@ -6,6 +6,7 @@ export const makeSession = (over: Partial<Session> = {}): Session => ({
   id: "s1",
   userId: "u1",
   question: "Is the moon made of cheese?",
+  transcript: null,
   title: null,
   mode: "ask",
   status: "done",

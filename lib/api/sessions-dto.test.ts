@@ -28,6 +28,27 @@ describe("CreateSessionBody", () => {
   });
 });
 
+describe("CreateSessionBody transcript mode", () => {
+  it("needs a transcript and defaults the focus question", () => {
+    expect(CreateSessionBody.safeParse({ mode: "transcript" }).success).toBe(false);
+    expect(CreateSessionBody.safeParse({ mode: "transcript", transcript: "  " }).success).toBe(
+      false,
+    );
+    expect(CreateSessionBody.parse({ mode: "transcript", transcript: " U: hi\nA: hey " })).toEqual({
+      mode: "transcript",
+      transcript: "U: hi\nA: hey",
+      question: "Which claims in this conversation hold up?",
+    });
+    expect(
+      CreateSessionBody.parse({ mode: "transcript", transcript: "x", question: "focus" }).question,
+    ).toBe("focus");
+  });
+  it("rejects an oversized transcript", () => {
+    const r = CreateSessionBody.safeParse({ mode: "transcript", transcript: "x".repeat(200_001) });
+    expect(r.success).toBe(false);
+  });
+});
+
 describe("ListQuery / RenameBody", () => {
   it("defaults and coerces", () => {
     expect(ListQuery.parse({})).toEqual({ limit: 50 });
@@ -51,6 +72,7 @@ describe("toListItem", () => {
     id: "s",
     userId: "u",
     question: "Q",
+    transcript: null,
     title: null,
     mode: "ask",
     status: "done",

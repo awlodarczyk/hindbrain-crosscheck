@@ -3,11 +3,12 @@
 import * as React from "react";
 import { ArrowUp } from "lucide-react";
 import { PasteFields, type Pasted } from "@/components/empty/paste-fields";
+import { TranscriptField } from "@/components/empty/transcript-field";
 import { Button } from "@/components/ui/button";
 import { useMedia } from "@/components/shell/use-media";
 import { Kbd } from "@/components/ui/kbd";
 import type { SettingsView } from "@/lib/api/settings-dto";
-import type { ProviderId } from "@/lib/db/enums";
+import type { ProviderId, SessionMode } from "@/lib/db/enums";
 import type { Settings } from "@/lib/settings/schema";
 import { cn } from "@/lib/utils";
 import { ModelChip } from "./model-chip";
@@ -15,8 +16,9 @@ import { SearchesChip } from "./searches-chip";
 
 export type ComposerSubmit = {
   question: string;
-  mode: "ask" | "paste";
+  mode: SessionMode;
   pasted?: { claude?: string; chatgpt?: string };
+  transcript?: string;
   overrides?: {
     providers?: { claude?: { answerModel?: string }; chatgpt?: { answerModel?: string } };
     cost?: { maxSearchesPerCall?: number };
@@ -32,13 +34,14 @@ export type ComposerProps = {
   /** Textarea placeholder shown while `disabled`. */
   disabledPlaceholder?: string;
   busy?: boolean;
-  mode?: "ask" | "paste";
+  mode?: SessionMode;
   onSubmit: (input: ComposerSubmit) => Promise<void>;
 };
 
 const PROVIDERS: readonly ProviderId[] = ["claude", "chatgpt"];
 const PLACEHOLDER = "e.g. Does static stretching before training reduce injury risk?";
 const DOCKED_PLACEHOLDER = "Ask a new question…";
+const TRANSCRIPT_PLACEHOLDER = "What should the models focus on? (optional)";
 const MAX_ROWS = 8;
 const LINE_PX = 21;
 
@@ -71,6 +74,7 @@ export function Composer(props: ComposerProps) {
   const docked = variant === "docked";
   const [question, setQuestion] = React.useState("");
   const [pasted, setPasted] = React.useState<Pasted>({ claude: "", chatgpt: "" });
+  const [transcript, setTranscript] = React.useState("");
   const [picked, setPicked] = React.useState<Partial<Record<ProviderId, string>>>({});
   const [searches, setSearches] = React.useState(settings.cost.maxSearchesPerCall);
   const [pending, setPending] = React.useState(false);
@@ -80,8 +84,11 @@ export function Composer(props: ComposerProps) {
   useAutoGrow(ref, question, docked ? 1 : 3);
 
   const paste = mode === "paste" && !docked;
+  const imported = mode === "transcript" && !docked;
   const hasPaste = pasted.claude.trim() !== "" || pasted.chatgpt.trim() !== "";
-  const ready = question.trim() !== "" && (!paste || hasPaste);
+  const ready = imported
+    ? transcript.trim() !== ""
+    : question.trim() !== "" && (!paste || hasPaste);
   const compact = docked && narrow;
   const blocked = disabled || busy || pending;
 
@@ -111,8 +118,9 @@ export function Composer(props: ComposerProps) {
     };
     return {
       question: question.trim(),
-      mode: paste ? "paste" : "ask",
+      mode: paste ? "paste" : imported ? "transcript" : "ask",
       ...(paste ? { pasted: pastedPayload(pasted) } : {}),
+      ...(imported ? { transcript: transcript.trim() } : {}),
       ...(Object.keys(overrides).length ? { overrides } : {}),
     };
   }
@@ -169,7 +177,9 @@ export function Composer(props: ComposerProps) {
       ? disabledPlaceholder
       : docked
         ? DOCKED_PLACEHOLDER
-        : PLACEHOLDER;
+        : imported
+          ? TRANSCRIPT_PLACEHOLDER
+          : PLACEHOLDER;
 
   const input = (
     <textarea
@@ -227,6 +237,7 @@ export function Composer(props: ComposerProps) {
     >
       {input}
       {paste && <PasteFields value={pasted} onChange={setPasted} />}
+      {imported && <TranscriptField value={transcript} onChange={setTranscript} />}
       <div className="flex items-center justify-between gap-3 px-3 pb-3 pt-2">
         {chips}
         {action}

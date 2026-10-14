@@ -34,6 +34,7 @@ export type ColumnDeps = {
   sessionId: string;
   runId: string;
   question: string;
+  transcript?: string | null;
 };
 
 /** One column: `answerer` answers, `reviewer` checks that answer. `existing` rows are reused. */
@@ -50,12 +51,12 @@ type Started = { id: string; at: Date; result: ModelResult; provider: ProviderId
 /** Builds the provider request for an answer, or for a review of `extra.answerText`. */
 export function buildRequest(
   kind: "answer" | "review",
-  deps: Pick<ColumnDeps, "settings" | "models" | "question">,
+  deps: Pick<ColumnDeps, "settings" | "models" | "question" | "transcript">,
   provider: ProviderId,
   extra?: { answerText: string; answerProvider: ProviderId },
 ): ModelRequest {
-  const { settings, question, models } = deps;
-  const ctx = { settings, question };
+  const { settings, question, transcript, models } = deps;
+  const ctx = { settings, question, transcript };
   if (kind === "review" && !extra) throw new Error("review request needs the answer text");
   return {
     kind,

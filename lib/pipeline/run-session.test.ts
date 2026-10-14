@@ -76,6 +76,23 @@ describe("runSession", () => {
     expect(latestRun(db, sid)?.finishedAt).not.toBeNull();
   });
 
+  it("passes the transcript into every provider request", async () => {
+    const sid = createSession(db, {
+      userId: LOCAL_USER_ID,
+      question: "focus",
+      mode: "transcript",
+      transcript: "User: hi\nAssistant: TRANSCRIPT-MARK",
+      settingsSnapshot: DEFAULT_SETTINGS,
+    }).id;
+    const d = deps();
+    await runSession(d, sid, { reason: "initial" });
+    const reqs = [d.providers.claude.call, d.providers.chatgpt.call].flatMap((f) =>
+      vi.mocked(f).mock.calls.map(([req]) => req),
+    );
+    expect(reqs).toHaveLength(4);
+    for (const r of reqs) expect(r.user).toContain("TRANSCRIPT-MARK");
+  });
+
   it("emits session.stats right before every call outcome", async () => {
     await runSession(deps(), session(), { reason: "initial" });
     const outcomes = ["call.done", "call.failed", "call.skipped"];

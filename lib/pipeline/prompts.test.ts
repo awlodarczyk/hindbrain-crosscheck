@@ -137,3 +137,27 @@ describe("structure", () => {
     }
   });
 });
+
+describe("transcript mode", () => {
+  const t = {
+    ...ctx(DEFAULT_SETTINGS),
+    transcript: "User: is creatine safe?\nAssistant: Yes, always.",
+  };
+  it("answer prompts challenge the conversation instead of answering", () => {
+    expect(answerSystemPrompt(t)).toContain("Challenge it");
+    expect(answerSystemPrompt(t)).not.toContain("Answer reliably");
+    expect(answerUserPrompt(t)).toBe(
+      `Focus:\n${question}\n\nThe conversation to check:\n<<<\n${t.transcript}\n>>>`,
+    );
+  });
+  it("review prompts carry the transcript and the misquote rule", () => {
+    expect(reviewSystemPrompt(t)).toContain("misrepresents what the transcript says");
+    const u = reviewUserPrompt({ ...t, answerText: "A", answerProvider: "claude" });
+    expect(u).toContain(`The conversation to check:\n<<<\n${t.transcript}\n>>>`);
+    expect(u.indexOf("conversation to check")).toBeLessThan(u.indexOf("The answer from Claude"));
+  });
+  it("few-shot examples are skipped with a transcript", () => {
+    const s = withSettings({ tuning: { fewShot: [{ question: "Q1", answer: "A1" }] } });
+    expect(answerUserPrompt({ ...t, settings: s })).not.toContain("Example question");
+  });
+});

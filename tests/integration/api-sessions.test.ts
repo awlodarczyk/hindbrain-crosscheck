@@ -7,7 +7,7 @@ import { createRunner, type Runner } from "@/lib/jobs/runner";
 import { createMockProvider } from "@/lib/providers/mock";
 import { listCallsForSession } from "@/lib/repos/calls";
 import { searchSessions } from "@/lib/repos/search";
-import { softDeleteAllSessions } from "@/lib/repos/sessions";
+import { getSession, softDeleteAllSessions } from "@/lib/repos/sessions";
 import { ensureLocalUser, LOCAL_USER_ID } from "@/lib/repos/users";
 import { DEFAULT_SETTINGS } from "@/lib/settings/defaults";
 import { DELETE as deleteAll, GET as list, POST as create } from "@/app/api/sessions/route";
@@ -105,11 +105,29 @@ describe("sessions api", () => {
     expect(calls.filter((c) => c.pasted)).toHaveLength(1);
   });
 
+  it("imports a transcript, titles it by its first line and feeds it to both models", async () => {
+    const transcript = "\nUser: Is creatine safe for teenagers?\nAssistant: Absolutely, no limits.";
+    const id = await createId({ mode: "transcript", transcript });
+    await runner.drain();
+    const s = getSession(db, LOCAL_USER_ID, id);
+    expect(s).toMatchObject({
+      mode: "transcript",
+      transcript: transcript.trim(),
+      title: "User: Is creatine safe for teenagers?",
+      question: "Which claims in this conversation hold up?",
+    });
+    const calls = listCallsForSession(db, id);
+    expect(calls).toHaveLength(4);
+    expect(calls.some((c) => c.pasted)).toBe(false);
+    expect(searchSessions(db, LOCAL_USER_ID, "teenagers").map((h) => h.id)).toEqual([id]);
+  });
+
   it("validates input", async () => {
     for (const body of [
       { question: "" },
       { question: "x".repeat(8001) },
       { question: "q", mode: "paste" },
+      { mode: "transcript" },
     ]) {
       const res = await post(body);
       expect(res.status).toBe(400);

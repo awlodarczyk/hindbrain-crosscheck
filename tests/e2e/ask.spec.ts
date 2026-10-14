@@ -28,3 +28,24 @@ test("paste mode creates a session with one pasted call", async ({ page }) => {
     expect(body.data.calls.filter((c) => c.pasted === true)).toHaveLength(1);
   }).toPass({ timeout: 30_000 });
 });
+
+test("transcript mode runs both columns and shows the imported conversation", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("radio", { name: "Import a transcript" }).click();
+  await page
+    .getByLabel("Chat transcript")
+    .fill("User: Does stretching prevent injuries?\nAssistant: Yes, it halves the risk.");
+  await page.getByRole("button", { name: /Ask & cross-check/ }).click();
+  await expect(page).toHaveURL(SESSION_URL, { timeout: 30_000 });
+  await expect(page.getByText("Imported transcript")).toBeVisible();
+  const id = page.url().split("/s/")[1] ?? "";
+  await expect(async () => {
+    const res = await page.request.get(`/api/sessions/${id}`);
+    const body = (await res.json()) as {
+      data: { session: { status: string; mode: string }; calls: unknown[] };
+    };
+    expect(body.data.session.mode).toBe("transcript");
+    expect(body.data.session.status).toBe("done");
+    expect(body.data.calls).toHaveLength(4);
+  }).toPass({ timeout: 30_000 });
+});

@@ -8,6 +8,7 @@ const session: Session = {
   id: "s1",
   userId: "u1",
   question: "Does static stretching before training reduce injury risk?",
+  transcript: null,
   title: null,
   mode: "ask",
   status: "done",

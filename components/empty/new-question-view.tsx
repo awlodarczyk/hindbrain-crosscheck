@@ -8,7 +8,7 @@ import { Composer, type ComposerSubmit } from "@/components/session/composer";
 import { Kbd } from "@/components/ui/kbd";
 import { api } from "@/lib/api/client";
 import type { SettingsView } from "@/lib/api/settings-dto";
-import type { ProviderId } from "@/lib/db/enums";
+import type { ProviderId, SessionMode } from "@/lib/db/enums";
 import { FirstRunPanel } from "./first-run-panel";
 import { FooterNote } from "./footer-note";
 import { Hero } from "./hero";
@@ -22,7 +22,7 @@ const errorMessage = (e: unknown) => (e instanceof Error ? e.message : "Somethin
 export function NewQuestionView({ initialView }: { initialView: SettingsView }) {
   const router = useRouter();
   const [view, setView] = React.useState(initialView);
-  const [mode, setMode] = React.useState<"ask" | "paste">("ask");
+  const [mode, setMode] = React.useState<SessionMode>("ask");
   const firstRun = !(["claude", "chatgpt"] as const).some((p) => isProviderUsable(view, p));
 
   async function submit(input: ComposerSubmit) {

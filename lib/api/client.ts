@@ -27,8 +27,9 @@ export type SessionListResponse = {
 
 export type CreateSessionInput = {
   question: string;
-  mode?: "ask" | "paste";
+  mode?: "ask" | "paste" | "transcript";
   pasted?: { claude?: string; chatgpt?: string };
+  transcript?: string;
   overrides?: unknown;
 };
 

@@ -1,5 +1,5 @@
 export type SessionStatus = "queued" | "running" | "done" | "partial" | "failed";
-export type SessionMode = "ask" | "paste";
+export type SessionMode = "ask" | "paste" | "transcript";
 export type RunReason = "initial" | "manual" | "disagreement";
 export type RunStatus = "queued" | "running" | "done" | "partial" | "failed";
 export type CallKind = "answer" | "review";

@@ -20,6 +20,7 @@ export const sessions = sqliteTable(
       .notNull()
       .references(() => users.id),
     question: text("question").notNull(),
+    transcript: text("transcript"),
     title: text("title"),
     mode: text("mode").$type<SessionMode>().notNull(),
     status: text("status").$type<SessionStatus>().notNull(),

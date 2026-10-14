@@ -16,6 +16,8 @@ Part of the hindbrain family (sibling of hindbrain reflex). Formerly FactCheck D
 ## How it works
 
 1. **Ask.** Type a question. Claude and ChatGPT answer it in parallel, each with web search.
+   Or import a chat transcript: both models then challenge the conversation instead,
+   verifying the claims the assistant made and flagging what does not hold up.
 2. **Cross-check.** Each answer is split into claims. The other model verifies every claim
    and marks it as supported, disputed, partial or unverifiable, with its sources.
 3. **Read.** Compare the two answers side by side, expand any claim to see the verdict and
@@ -26,14 +28,14 @@ read them, especially for medical, legal or financial topics.
 
 ## Screenshots
 
-| | |
-|---|---|
-| **Cross-check.** Every claim with its verdict, the model that checked it and the source it used. | **Sources.** Every link both models cited, tagged by which answer or review used it. |
-| <img src=".github/images/cross-check.png" alt="Cross-check tab: claims table with verdict, claim text, checked by, source"> | <img src=".github/images/sources.png" alt="Sources tab: list of cited domains and URLs with Claude answer, ChatGPT answer and review tags"> |
-| **New question.** Pick models and a search budget, or paste two existing answers. | **Settings · Models.** Claude Code CLI or API key per provider, answer and verification models, reasoning effort. |
-| <img src=".github/images/new-question.png" alt="New question screen with composer, model pickers and the Ask, Cross-check, Read steps"> | <img src=".github/images/settings-models.png" alt="Settings Models page with provider connection cards and model pickers"> |
-| **Dark mode.** Follows the system or a setting. | **Mobile.** Same session, one column, drawer for history. |
-| <img src=".github/images/session-dark.png" alt="Session view in dark mode"> | <img src=".github/images/mobile.png" alt="Session view on a phone" width="300"> |
+|                                                                                                                                         |                                                                                                                                             |
+| --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cross-check.** Every claim with its verdict, the model that checked it and the source it used.                                        | **Sources.** Every link both models cited, tagged by which answer or review used it.                                                        |
+| <img src=".github/images/cross-check.png" alt="Cross-check tab: claims table with verdict, claim text, checked by, source">             | <img src=".github/images/sources.png" alt="Sources tab: list of cited domains and URLs with Claude answer, ChatGPT answer and review tags"> |
+| **New question.** Pick models and a search budget, paste two existing answers, or import a chat transcript.                             | **Settings · Models.** Claude Code CLI or API key per provider, answer and verification models, reasoning effort.                           |
+| <img src=".github/images/new-question.png" alt="New question screen with composer, model pickers and the Ask, Cross-check, Read steps"> | <img src=".github/images/settings-models.png" alt="Settings Models page with provider connection cards and model pickers">                  |
+| **Dark mode.** Follows the system or a setting.                                                                                         | **Mobile.** Same session, one column, drawer for history.                                                                                   |
+| <img src=".github/images/session-dark.png" alt="Session view in dark mode">                                                             | <img src=".github/images/mobile.png" alt="Session view on a phone" width="300">                                                             |
 
 ## Run locally
 

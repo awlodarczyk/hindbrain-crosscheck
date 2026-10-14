@@ -18,6 +18,7 @@ export function importBundle(db: Db, userId: string, bundle: ImportBundle): stri
         id,
         userId,
         question: s.question,
+        transcript: s.transcript,
         title: s.title,
         mode: s.mode,
         status: s.status,

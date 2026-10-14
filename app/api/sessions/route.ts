@@ -8,6 +8,7 @@ import { appendEvent } from "@/lib/repos/events";
 import { indexSession, removeFromIndex } from "@/lib/repos/search";
 import { createSession, listSessions, softDeleteAllSessions } from "@/lib/repos/sessions";
 import { getSettings } from "@/lib/repos/settings";
+import { TRANSCRIPT_DEFAULT_QUESTION } from "@/lib/pipeline/prompts";
 import { mergeSettings } from "@/lib/settings/merge";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +31,12 @@ function trimPasted(pasted: { claude?: string; chatgpt?: string } | undefined): 
   return out;
 }
 
+/** First non-empty line of a transcript, as the history title when no focus question was given. */
+function transcriptTitle(transcript: string): string {
+  const line = transcript.split("\n").find((l) => l.trim() !== "") ?? "";
+  return line.trim().slice(0, 80);
+}
+
 /** Ask costs a flat `ask`; bodies over 20 kB (paste imports) are weighted by size. */
 const createCost = ({ bodyBytes }: { bodyBytes: number }) =>
   bodyBytes > 20_000 ? costForBody("paste_import_per_10kb", bodyBytes) : costForBody("ask");
@@ -40,13 +47,19 @@ export const POST = defineRoute(
     const db = getRequestDb();
     const base = getSettings(db, ctx.userId);
     const settingsSnapshot = mergeSettings(base, body.overrides ?? {}).settings;
+    const transcript = body.mode === "transcript" ? body.transcript : undefined;
     const { id } = createSession(db, {
       userId: ctx.userId,
       question: body.question,
       mode: body.mode,
       settingsSnapshot,
+      transcript,
+      title:
+        transcript && body.question === TRANSCRIPT_DEFAULT_QUESTION
+          ? transcriptTitle(transcript)
+          : undefined,
     });
-    indexSession(db, id, body.question, "");
+    indexSession(db, id, body.question, transcript ?? "");
     appendEvent(db, {
       sessionId: id,
       userId: ctx.userId,
