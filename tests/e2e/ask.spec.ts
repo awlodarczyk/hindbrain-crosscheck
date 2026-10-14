@@ -64,7 +64,9 @@ test("transcript mode normalises a pasted Claude export", async ({ page }) => {
   await page.getByRole("button", { name: /Ask & cross-check/ }).click();
   await expect(page).toHaveURL(SESSION_URL, { timeout: 30_000 });
   await page.locator("details summary", { hasText: "Imported transcript" }).click();
-  await expect(page.locator("details pre")).toContainText(/^User: Does stretching/);
+  const transcript = page.locator("details dl");
+  await expect(transcript.getByText("User", { exact: true })).toBeVisible();
+  await expect(transcript).toContainText("Does stretching prevent injuries?");
   await expect(page.getByText("chat_messages")).toHaveCount(0);
 });
 

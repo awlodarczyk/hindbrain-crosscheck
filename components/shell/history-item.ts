@@ -16,5 +16,6 @@ export function toHistoryItem(session: Session): HistoryItem {
     callsDone: session.stats.callsDone,
     callsTotal: session.stats.calls || (live ? PLANNED_CALLS : 0),
     createdAt: session.createdAt,
+    mode: session.mode,
   };
 }

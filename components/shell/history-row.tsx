@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { rowMeta, type HistoryItem } from "./group-by-day";
 
@@ -57,8 +58,13 @@ export function HistoryRow({
       >
         <span aria-hidden="true" className={cn("size-2 rounded-full", dotClass(item))} />
         <span className="min-w-0">
-          <span className="block truncate text-[13px] font-medium text-text-primary">
-            {item.question}
+          <span className="flex items-center gap-2">
+            <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-text-primary">
+              {item.question}
+            </span>
+            {item.mode === "transcript" && (
+              <Badge className="h-4 shrink-0 px-1 text-[10px]">Transcript</Badge>
+            )}
           </span>
           <span className="block truncate font-mono text-[11px] text-text-muted">
             {rowMeta(item, formatTime)}

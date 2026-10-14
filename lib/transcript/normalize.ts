@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { ROLE_LABEL, type TurnRole } from "./roles";
 
-export type Turn = { readonly role: "user" | "assistant"; readonly text: string };
+export type Turn = { readonly role: TurnRole; readonly text: string };
 
 const ChatGptNode = z
   .object({
@@ -38,7 +39,6 @@ function firstConversation(json: unknown): unknown {
   return Array.isArray(json) ? json[0] : json;
 }
 
-const ROLE_LABEL: Record<Turn["role"], string> = { user: "User", assistant: "Assistant" };
 const CLAUDE_SENDER_ROLE: Record<string, Turn["role"] | undefined> = {
   human: "user",
   assistant: "assistant",

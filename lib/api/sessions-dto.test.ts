@@ -124,6 +124,7 @@ describe("toListItem", () => {
       callsDone: 3,
       callsTotal: 4,
       createdAt: "t",
+      mode: "ask",
     });
     expect(toListItem({ ...base, title: "T" }).question).toBe("T");
   });

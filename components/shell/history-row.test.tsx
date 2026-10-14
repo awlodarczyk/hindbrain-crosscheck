@@ -49,3 +49,14 @@ describe("HistoryRow", () => {
     expect(container.querySelector(".bg-status-supported")).not.toBeNull();
   });
 });
+
+describe("HistoryRow mode chip", () => {
+  it("shows a Transcript chip for transcript sessions", () => {
+    render(<HistoryRow item={{ ...item, mode: "transcript" }} active={false} href="/s/s1" />);
+    expect(screen.getByText("Transcript")).toBeInTheDocument();
+  });
+  it("omits the chip otherwise", () => {
+    render(<HistoryRow item={item} active={false} href="/s/s1" />);
+    expect(screen.queryByText("Transcript")).toBeNull();
+  });
+});

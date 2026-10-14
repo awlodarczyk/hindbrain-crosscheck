@@ -99,6 +99,7 @@ export function toListItem(s: Session): SessionListItem {
     callsDone: s.stats.callsDone,
     callsTotal: s.stats.calls,
     createdAt: s.createdAt,
+    mode: s.mode,
   };
 }
 
