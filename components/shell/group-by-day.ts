@@ -1,3 +1,5 @@
+import type { SessionMode } from "@/lib/db/enums";
+
 export type HistoryItem = {
   id: string;
   question: string;
@@ -7,6 +9,7 @@ export type HistoryItem = {
   callsDone: number;
   callsTotal: number;
   createdAt: string;
+  mode?: SessionMode;
   /** Set only on soft-deleted sessions. */
   deletedAt?: string;
 };

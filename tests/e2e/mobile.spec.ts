@@ -90,3 +90,21 @@ test("empty page renders without overflow", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /Ask once/ })).toBeVisible();
   expect(await noHorizontalScroll(page)).toBe(true);
 });
+
+test("transcript session: collapsed summary opens labelled turns without overflow", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("radio", { name: "Import a transcript" }).click();
+  await page
+    .getByLabel("Chat transcript")
+    .fill("User: Does stretching prevent injuries?\nAssistant: Yes, it halves the risk.");
+  await page.getByRole("button", { name: /Ask & cross-check/ }).click();
+  await expect(page).toHaveURL(/\/s\/[\w-]+$/, { timeout: 30_000 });
+  const summary = page.getByText("Imported transcript");
+  await expect(summary).toBeVisible();
+  await expect(page.locator("details")).not.toHaveAttribute("open");
+  await summary.click();
+  await expect(page.getByText("User", { exact: true })).toBeVisible();
+  expect(await noHorizontalScroll(page)).toBe(true);
+});

@@ -1,8 +1,40 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { EMPTY_STATS, type Session } from "@/lib/repos/types";
 import { CreateSessionBody, ListQuery, RenameBody, toListItem } from "./sessions-dto";
 
 describe("CreateSessionBody", () => {
+  it("normalises an exported ChatGPT transcript to plain turns", () => {
+    const transcript = readFileSync("tests/fixtures/transcripts/chatgpt-export.json", "utf8");
+    expect(CreateSessionBody.parse({ mode: "transcript", transcript }).transcript).toBe(
+      "User: Does stretching prevent injuries?\n\nAssistant: Not reliably.",
+    );
+  });
+  it("applies the limit after normalisation", () => {
+    const transcript = JSON.stringify({
+      padding: "x".repeat(250_000),
+      chat_messages: [
+        { sender: "human", text: "Q?" },
+        { sender: "assistant", text: "A." },
+      ],
+    });
+    expect(transcript.length).toBeGreaterThan(200_000);
+    expect(CreateSessionBody.parse({ mode: "transcript", transcript }).transcript).toBe(
+      "User: Q?\n\nAssistant: A.",
+    );
+  });
+  it("rejects a raw transcript over the raw cap even if it would normalise small", () => {
+    const transcript = JSON.stringify({
+      padding: "x".repeat(500_001),
+      chat_messages: [{ sender: "human", text: "Q?" }],
+    });
+    expect(CreateSessionBody.safeParse({ mode: "transcript", transcript }).success).toBe(false);
+  });
+  it("still rejects an oversized plain transcript", () => {
+    expect(
+      CreateSessionBody.safeParse({ mode: "transcript", transcript: "x".repeat(200_001) }).success,
+    ).toBe(false);
+  });
   it("trims and defaults mode", () => {
     expect(CreateSessionBody.parse({ question: "  hi  " })).toMatchObject({
       question: "hi",
@@ -92,6 +124,7 @@ describe("toListItem", () => {
       callsDone: 3,
       callsTotal: 4,
       createdAt: "t",
+      mode: "ask",
     });
     expect(toListItem({ ...base, title: "T" }).question).toBe("T");
   });

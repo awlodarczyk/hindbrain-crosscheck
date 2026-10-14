@@ -4,7 +4,10 @@
 
 ### Added
 
-- Transcript mode: import a chat transcript (paste or load a .txt/.md file) with an optional focus question; both models challenge the conversation, verify the assistant's claims and review each other's analysis. The transcript is shown on the session page and included in search and export.
+- Transcript mode: import a chat transcript (paste or load a .txt/.md/.json file) with an optional focus question; both models challenge the conversation, verify the assistant's claims and review each other's analysis. Transcripts are included in search and export.
+- Export parsers: ChatGPT (`conversations.json`, shared-link `mapping`) and Claude (`chat_messages`) JSON are converted to `User:` / `Assistant:` turns on paste, file load and on the server.
+- Follow-up focus question from a transcript session, creating a new session on the same transcript.
+- Transcript viewer on the session page with labelled turns, plus a "Transcript" badge in the header and history sidebar.
 
 ## 1.0.0 — 2026-10-13
 

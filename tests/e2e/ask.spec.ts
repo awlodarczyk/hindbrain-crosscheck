@@ -49,3 +49,54 @@ test("transcript mode runs both columns and shows the imported conversation", as
     expect(body.data.calls).toHaveLength(4);
   }).toPass({ timeout: 30_000 });
 });
+
+test("transcript mode normalises a pasted Claude export", async ({ page }) => {
+  const claudeExport = JSON.stringify({
+    uuid: "c1",
+    chat_messages: [
+      { sender: "human", text: "Does stretching prevent injuries?" },
+      { sender: "assistant", text: "", content: [{ type: "text", text: "Not reliably." }] },
+    ],
+  });
+  await page.goto("/");
+  await page.getByRole("radio", { name: "Import a transcript" }).click();
+  await page.getByLabel("Chat transcript").fill(claudeExport);
+  await page.getByRole("button", { name: /Ask & cross-check/ }).click();
+  await expect(page).toHaveURL(SESSION_URL, { timeout: 30_000 });
+  await page.locator("details summary", { hasText: "Imported transcript" }).click();
+  const transcript = page.locator("details dl");
+  await expect(transcript.getByText("User", { exact: true })).toBeVisible();
+  await expect(transcript).toContainText("Does stretching prevent injuries?");
+  await expect(page.getByText("chat_messages")).toHaveCount(0);
+});
+
+test("a follow-up on a transcript session reuses the transcript with a new focus question", async ({
+  page,
+}) => {
+  const transcript = "User: Is the risk real?\nAssistant: Yes, it is substantial.";
+  const focus = "Is the risk claim supported?";
+  await page.goto("/");
+  await page.getByRole("radio", { name: "Import a transcript" }).click();
+  await page.getByLabel("Chat transcript").fill(transcript);
+  await page.getByRole("button", { name: /Ask & cross-check/ }).click();
+  await expect(page).toHaveURL(SESSION_URL, { timeout: 30_000 });
+  const firstUrl = page.url();
+  const followUp = page.getByPlaceholder("Ask a follow-up about this transcript…");
+  await followUp.fill(focus);
+  await followUp.press("Meta+Enter");
+  await expect(page).toHaveURL(SESSION_URL, { timeout: 30_000 });
+  await expect(page).not.toHaveURL(firstUrl);
+  const id = page.url().split("/s/")[1] ?? "";
+  const res = await page.request.get(`/api/sessions/${id}`);
+  const body = (await res.json()) as {
+    data: {
+      session: { mode: string; transcript: string; question: string; title: string | null };
+    };
+  };
+  expect(body.data.session).toMatchObject({
+    mode: "transcript",
+    transcript,
+    question: focus,
+    title: null,
+  });
+});
