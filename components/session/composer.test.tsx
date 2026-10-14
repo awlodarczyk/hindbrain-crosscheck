@@ -152,6 +152,46 @@ describe("Composer", () => {
     );
   });
 
+  it("follow-up payload carries overrides", async () => {
+    const onSubmit = setup({ variant: "docked", followUpTranscript: "U: hi" });
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Max searches" }), {
+      target: { value: "3" },
+    });
+    await userEvent.type(box(), "q");
+    fireEvent.keyDown(box(), { key: "Enter", metaKey: true });
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith({
+        question: "q",
+        mode: "transcript",
+        transcript: "U: hi",
+        overrides: { cost: { maxSearchesPerCall: 3 } },
+      }),
+    );
+  });
+
+  it("compact docked follow-up shows the placeholder and submits the transcript", async () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockReturnValue({
+        matches: true,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
+    );
+    const onSubmit = setup({ variant: "docked", followUpTranscript: "U: hi" });
+    expect(box()).toHaveAttribute("placeholder", "Ask a follow-up about this transcript…");
+    await userEvent.type(box(), "q");
+    await userEvent.click(ask());
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith({
+        question: "q",
+        mode: "transcript",
+        transcript: "U: hi",
+      }),
+    );
+    vi.unstubAllGlobals();
+  });
+
   it("docked without a follow-up transcript stays an ask", async () => {
     const onSubmit = setup({ variant: "docked" });
     expect(box()).toHaveAttribute("placeholder", "Ask a new question…");
